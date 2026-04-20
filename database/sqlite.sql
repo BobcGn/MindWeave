@@ -1,5 +1,6 @@
--- Local SQLite schema for MindWeave.
--- This mirrors the offline-first client model managed by SQLDelight in shared/.
+-- MindWeave local SQLite bootstrap script.
+-- Example:
+--   sqlite3 mindweave.sqlite < database/sqlite.sql
 
 PRAGMA foreign_keys = ON;
 

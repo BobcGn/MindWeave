@@ -1,8 +1,15 @@
--- PostgreSQL schema for MindWeave sync server.
--- Bootstrap the database first, for example:
---   psql -d postgres -f database/create_server_db.sql
---   psql -d mindweave -f database/schema.sql
--- The server stores canonical entity snapshots plus an append-only change log.
+-- MindWeave PostgreSQL bootstrap script.
+-- Run this with psql against a maintenance database such as `postgres`:
+--   psql -d postgres -f database/postgres.sql
+
+SELECT 'CREATE DATABASE mindweave WITH ENCODING ''UTF8'''
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM pg_database
+  WHERE datname = 'mindweave'
+)\gexec
+
+\connect mindweave
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
