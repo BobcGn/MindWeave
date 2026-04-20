@@ -1,0 +1,175 @@
+ALTER TABLE diary_entry RENAME TO diary_entry_legacy;
+
+CREATE TABLE diary_entry (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  mood TEXT NOT NULL,
+  ai_summary TEXT,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+INSERT INTO diary_entry(
+  id,
+  user_id,
+  title,
+  content,
+  mood,
+  ai_summary,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+)
+SELECT
+  diary_entry_legacy.id,
+  'local-user',
+  diary_entry_legacy.title,
+  diary_entry_legacy.body,
+  diary_entry_legacy.mood,
+  ai_reflection.summary,
+  diary_entry_legacy.created_at_epoch_ms,
+  diary_entry_legacy.updated_at_epoch_ms,
+  NULL,
+  1,
+  'migration-v1'
+FROM diary_entry_legacy
+LEFT JOIN ai_reflection
+  ON ai_reflection.entry_id = diary_entry_legacy.id;
+
+DROP TABLE diary_entry_legacy;
+DROP TABLE ai_reflection;
+
+CREATE INDEX diary_entry_user_updated_idx
+ON diary_entry(user_id, updated_at_epoch_ms DESC);
+
+CREATE INDEX diary_entry_user_deleted_idx
+ON diary_entry(user_id, deleted_at_epoch_ms);
+
+CREATE TABLE schedule_event (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  start_time_epoch_ms INTEGER NOT NULL,
+  end_time_epoch_ms INTEGER NOT NULL,
+  remind_at_epoch_ms INTEGER,
+  type TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE INDEX schedule_event_user_updated_idx
+ON schedule_event(user_id, updated_at_epoch_ms DESC);
+
+CREATE INDEX schedule_event_time_idx
+ON schedule_event(user_id, start_time_epoch_ms, end_time_epoch_ms);
+
+CREATE TABLE tag (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX tag_user_name_idx
+ON tag(user_id, name);
+
+CREATE INDEX tag_user_updated_idx
+ON tag(user_id, updated_at_epoch_ms DESC);
+
+CREATE TABLE diary_entry_tag (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  entry_id TEXT NOT NULL REFERENCES diary_entry(id),
+  tag_id TEXT NOT NULL REFERENCES tag(id),
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE INDEX diary_entry_tag_entry_idx
+ON diary_entry_tag(entry_id, deleted_at_epoch_ms);
+
+CREATE INDEX diary_entry_tag_tag_idx
+ON diary_entry_tag(tag_id, deleted_at_epoch_ms);
+
+CREATE TABLE chat_session (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE INDEX chat_session_user_updated_idx
+ON chat_session(user_id, updated_at_epoch_ms DESC);
+
+CREATE TABLE chat_message (
+  id TEXT NOT NULL PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES chat_session(id),
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE INDEX chat_message_session_created_idx
+ON chat_message(session_id, created_at_epoch_ms ASC);
+
+CREATE INDEX chat_message_user_updated_idx
+ON chat_message(user_id, updated_at_epoch_ms DESC);
+
+CREATE TABLE sync_outbox (
+  id TEXT NOT NULL PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  operation TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  retry_count INTEGER NOT NULL,
+  status TEXT NOT NULL
+);
+
+CREATE INDEX sync_outbox_status_created_idx
+ON sync_outbox(status, created_at_epoch_ms ASC);
+
+CREATE TABLE sync_metadata (
+  key TEXT NOT NULL PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE sync_conflict (
+  id TEXT NOT NULL PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  local_payload TEXT NOT NULL,
+  remote_payload TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX sync_conflict_entity_idx
+ON sync_conflict(entity_type, entity_id, created_at_epoch_ms DESC);

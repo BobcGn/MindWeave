@@ -1,0 +1,101 @@
+CREATE TABLE sync_outbox (
+  id TEXT NOT NULL PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  operation TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  retry_count INTEGER NOT NULL,
+  status TEXT NOT NULL
+);
+
+CREATE INDEX sync_outbox_status_created_idx
+ON sync_outbox(status, created_at_epoch_ms ASC);
+
+CREATE TABLE sync_metadata (
+  key TEXT NOT NULL PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE sync_conflict (
+  id TEXT NOT NULL PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  local_payload TEXT NOT NULL,
+  remote_payload TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX sync_conflict_entity_idx
+ON sync_conflict(entity_type, entity_id, created_at_epoch_ms DESC);
+
+insertOutboxChange:
+INSERT OR REPLACE INTO sync_outbox(
+  id,
+  entity_type,
+  entity_id,
+  operation,
+  payload,
+  created_at_epoch_ms,
+  retry_count,
+  status
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+selectPendingOutboxChanges:
+SELECT
+  id,
+  entity_type,
+  entity_id,
+  operation,
+  payload,
+  created_at_epoch_ms,
+  retry_count,
+  status
+FROM sync_outbox
+WHERE status != 'SYNCED'
+ORDER BY created_at_epoch_ms ASC;
+
+markOutboxChangeStatus:
+UPDATE sync_outbox
+SET
+  retry_count = ?,
+  status = ?
+WHERE id = ?;
+
+countPendingOutboxChanges:
+SELECT COUNT(*)
+FROM sync_outbox
+WHERE status != 'SYNCED';
+
+upsertSyncMetadata:
+INSERT OR REPLACE INTO sync_metadata(key, value)
+VALUES (?, ?);
+
+selectSyncMetadata:
+SELECT value
+FROM sync_metadata
+WHERE key = ?;
+
+insertSyncConflict:
+INSERT OR REPLACE INTO sync_conflict(
+  id,
+  entity_type,
+  entity_id,
+  local_payload,
+  remote_payload,
+  status,
+  created_at_epoch_ms
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+selectSyncConflicts:
+SELECT
+  id,
+  entity_type,
+  entity_id,
+  local_payload,
+  remote_payload,
+  status,
+  created_at_epoch_ms
+FROM sync_conflict
+ORDER BY created_at_epoch_ms DESC;

@@ -1,0 +1,126 @@
+CREATE TABLE diary_entry (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  mood TEXT NOT NULL,
+  ai_summary TEXT,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE INDEX diary_entry_user_updated_idx
+ON diary_entry(user_id, updated_at_epoch_ms DESC);
+
+CREATE INDEX diary_entry_user_deleted_idx
+ON diary_entry(user_id, deleted_at_epoch_ms);
+
+selectDiaryTimeline:
+SELECT
+  diary_entry.id,
+  diary_entry.user_id,
+  diary_entry.title,
+  diary_entry.content,
+  diary_entry.mood,
+  diary_entry.ai_summary,
+  diary_entry.created_at_epoch_ms,
+  diary_entry.updated_at_epoch_ms,
+  diary_entry.deleted_at_epoch_ms,
+  diary_entry.version,
+  diary_entry.last_modified_by_device_id,
+  COALESCE(group_concat(tag.name, ','), '') AS tag_names
+FROM diary_entry
+LEFT JOIN diary_entry_tag
+  ON diary_entry_tag.entry_id = diary_entry.id
+  AND diary_entry_tag.deleted_at_epoch_ms IS NULL
+LEFT JOIN tag
+  ON tag.id = diary_entry_tag.tag_id
+  AND tag.deleted_at_epoch_ms IS NULL
+WHERE diary_entry.user_id = ?
+  AND diary_entry.deleted_at_epoch_ms IS NULL
+GROUP BY diary_entry.id
+ORDER BY diary_entry.created_at_epoch_ms DESC;
+
+selectRecentDiaryEntries:
+SELECT
+  diary_entry.id,
+  diary_entry.user_id,
+  diary_entry.title,
+  diary_entry.content,
+  diary_entry.mood,
+  diary_entry.ai_summary,
+  diary_entry.created_at_epoch_ms,
+  diary_entry.updated_at_epoch_ms,
+  diary_entry.deleted_at_epoch_ms,
+  diary_entry.version,
+  diary_entry.last_modified_by_device_id,
+  COALESCE(group_concat(tag.name, ','), '') AS tag_names
+FROM diary_entry
+LEFT JOIN diary_entry_tag
+  ON diary_entry_tag.entry_id = diary_entry.id
+  AND diary_entry_tag.deleted_at_epoch_ms IS NULL
+LEFT JOIN tag
+  ON tag.id = diary_entry_tag.tag_id
+  AND tag.deleted_at_epoch_ms IS NULL
+WHERE diary_entry.user_id = ?
+  AND diary_entry.deleted_at_epoch_ms IS NULL
+GROUP BY diary_entry.id
+ORDER BY diary_entry.created_at_epoch_ms DESC
+LIMIT ?;
+
+selectDiaryEntryById:
+SELECT
+  diary_entry.id,
+  diary_entry.user_id,
+  diary_entry.title,
+  diary_entry.content,
+  diary_entry.mood,
+  diary_entry.ai_summary,
+  diary_entry.created_at_epoch_ms,
+  diary_entry.updated_at_epoch_ms,
+  diary_entry.deleted_at_epoch_ms,
+  diary_entry.version,
+  diary_entry.last_modified_by_device_id,
+  COALESCE(group_concat(tag.name, ','), '') AS tag_names
+FROM diary_entry
+LEFT JOIN diary_entry_tag
+  ON diary_entry_tag.entry_id = diary_entry.id
+  AND diary_entry_tag.deleted_at_epoch_ms IS NULL
+LEFT JOIN tag
+  ON tag.id = diary_entry_tag.tag_id
+  AND tag.deleted_at_epoch_ms IS NULL
+WHERE diary_entry.id = ?
+GROUP BY diary_entry.id;
+
+upsertDiaryEntry:
+INSERT OR REPLACE INTO diary_entry(
+  id,
+  user_id,
+  title,
+  content,
+  mood,
+  ai_summary,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+softDeleteDiaryEntry:
+UPDATE diary_entry
+SET
+  deleted_at_epoch_ms = ?,
+  updated_at_epoch_ms = ?,
+  version = ?,
+  last_modified_by_device_id = ?
+WHERE id = ?;
+
+countActiveDiaryEntries:
+SELECT COUNT(*)
+FROM diary_entry
+WHERE user_id = ?
+  AND deleted_at_epoch_ms IS NULL;

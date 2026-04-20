@@ -1,0 +1,139 @@
+CREATE TABLE tag (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX tag_user_name_idx
+ON tag(user_id, name);
+
+CREATE INDEX tag_user_updated_idx
+ON tag(user_id, updated_at_epoch_ms DESC);
+
+CREATE TABLE diary_entry_tag (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  entry_id TEXT NOT NULL REFERENCES diary_entry(id),
+  tag_id TEXT NOT NULL REFERENCES tag(id),
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE INDEX diary_entry_tag_entry_idx
+ON diary_entry_tag(entry_id, deleted_at_epoch_ms);
+
+CREATE INDEX diary_entry_tag_tag_idx
+ON diary_entry_tag(tag_id, deleted_at_epoch_ms);
+
+selectActiveTags:
+SELECT
+  id,
+  user_id,
+  name,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM tag
+WHERE user_id = ?
+  AND deleted_at_epoch_ms IS NULL
+ORDER BY name ASC;
+
+selectTagById:
+SELECT
+  id,
+  user_id,
+  name,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM tag
+WHERE id = ?;
+
+selectActiveTagsForEntry:
+SELECT
+  tag.id,
+  tag.user_id,
+  tag.name,
+  tag.created_at_epoch_ms,
+  tag.updated_at_epoch_ms,
+  tag.deleted_at_epoch_ms,
+  tag.version,
+  tag.last_modified_by_device_id
+FROM tag
+INNER JOIN diary_entry_tag
+  ON diary_entry_tag.tag_id = tag.id
+WHERE diary_entry_tag.entry_id = ?
+  AND diary_entry_tag.deleted_at_epoch_ms IS NULL
+  AND tag.deleted_at_epoch_ms IS NULL
+ORDER BY tag.name ASC;
+
+selectActiveDiaryEntryTagLinksForEntry:
+SELECT
+  id,
+  user_id,
+  entry_id,
+  tag_id,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM diary_entry_tag
+WHERE entry_id = ?
+  AND deleted_at_epoch_ms IS NULL;
+
+upsertTag:
+INSERT OR REPLACE INTO tag(
+  id,
+  user_id,
+  name,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+upsertDiaryEntryTag:
+INSERT OR REPLACE INTO diary_entry_tag(
+  id,
+  user_id,
+  entry_id,
+  tag_id,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+softDeleteTag:
+UPDATE tag
+SET
+  deleted_at_epoch_ms = ?,
+  updated_at_epoch_ms = ?,
+  version = ?,
+  last_modified_by_device_id = ?
+WHERE id = ?;
+
+softDeleteDiaryEntryTag:
+UPDATE diary_entry_tag
+SET
+  deleted_at_epoch_ms = ?,
+  updated_at_epoch_ms = ?,
+  version = ?,
+  last_modified_by_device_id = ?
+WHERE entry_id = ?
+  AND tag_id = ?;

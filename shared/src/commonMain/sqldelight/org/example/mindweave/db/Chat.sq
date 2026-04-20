@@ -1,0 +1,154 @@
+CREATE TABLE chat_session (
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE INDEX chat_session_user_updated_idx
+ON chat_session(user_id, updated_at_epoch_ms DESC);
+
+CREATE TABLE chat_message (
+  id TEXT NOT NULL PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES chat_session(id),
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  deleted_at_epoch_ms INTEGER,
+  version INTEGER NOT NULL,
+  last_modified_by_device_id TEXT NOT NULL
+);
+
+CREATE INDEX chat_message_session_created_idx
+ON chat_message(session_id, created_at_epoch_ms ASC);
+
+CREATE INDEX chat_message_user_updated_idx
+ON chat_message(user_id, updated_at_epoch_ms DESC);
+
+selectActiveChatSessions:
+SELECT
+  id,
+  user_id,
+  title,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM chat_session
+WHERE user_id = ?
+  AND deleted_at_epoch_ms IS NULL
+ORDER BY updated_at_epoch_ms DESC;
+
+selectMessagesBySession:
+SELECT
+  id,
+  session_id,
+  user_id,
+  role,
+  content,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM chat_message
+WHERE session_id = ?
+  AND deleted_at_epoch_ms IS NULL
+ORDER BY created_at_epoch_ms ASC;
+
+selectChatSessionById:
+SELECT
+  id,
+  user_id,
+  title,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM chat_session
+WHERE id = ?;
+
+selectChatMessageById:
+SELECT
+  id,
+  session_id,
+  user_id,
+  role,
+  content,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM chat_message
+WHERE id = ?;
+
+selectRecentChatMessages:
+SELECT
+  id,
+  session_id,
+  user_id,
+  role,
+  content,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM chat_message
+WHERE user_id = ?
+  AND deleted_at_epoch_ms IS NULL
+ORDER BY created_at_epoch_ms DESC
+LIMIT ?;
+
+upsertChatSession:
+INSERT OR REPLACE INTO chat_session(
+  id,
+  user_id,
+  title,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+upsertChatMessage:
+INSERT OR REPLACE INTO chat_message(
+  id,
+  session_id,
+  user_id,
+  role,
+  content,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+softDeleteChatSession:
+UPDATE chat_session
+SET
+  deleted_at_epoch_ms = ?,
+  updated_at_epoch_ms = ?,
+  version = ?,
+  last_modified_by_device_id = ?
+WHERE id = ?;
+
+softDeleteChatMessage:
+UPDATE chat_message
+SET
+  deleted_at_epoch_ms = ?,
+  updated_at_epoch_ms = ?,
+  version = ?,
+  last_modified_by_device_id = ?
+WHERE id = ?;

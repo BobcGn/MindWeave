@@ -6,6 +6,8 @@ xcuserdata
 !src/**/build/
 local.properties
 .idea
+.gradle-user-home
+.codex
 .DS_Store
 captures
 .externalNativeBuild
@@ -17,3 +19,4 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+mindweave.db
