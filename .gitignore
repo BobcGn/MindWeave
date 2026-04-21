@@ -20,3 +20,11 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
 mindweave.db
+
+# HarmonyOS / DevEco generated files
+harmonyApp/.appanalyzer/
+harmonyApp/.hvigor/
+harmonyApp/hvigor/
+harmonyApp/**/oh_modules/
+harmonyApp/entry/src/main/libs/**/libmindweave.so
+harmonyApp/entry/src/main/libs/**/mindweave_bridge_mode.txt
