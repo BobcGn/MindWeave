@@ -17,14 +17,23 @@ if(EXISTS ${MINDWEAVE_BRIDGE_MODE_FILE})
     string(STRIP "${MINDWEAVE_BRIDGE_MODE}" MINDWEAVE_BRIDGE_MODE)
 endif()
 
-if(EXISTS ${MINDWEAVE_SHARED_LIB} AND NOT MINDWEAVE_BRIDGE_MODE STREQUAL "demo")
-    add_library(mindweave SHARED IMPORTED)
-    set_target_properties(mindweave PROPERTIES
-        IMPORTED_LOCATION ${MINDWEAVE_SHARED_LIB}
+if(NOT EXISTS ${MINDWEAVE_SHARED_LIB})
+    message(FATAL_ERROR
+        "Real Harmony bridge requires libmindweave.so at ${MINDWEAVE_SHARED_LIB}. "
+        "Run ./2.0_ohos_mindweave_build.sh Debug kba or publishDebugBinariesToHarmonyApp first."
     )
-    target_compile_definitions(mindweave_bridge PRIVATE MINDWEAVE_USE_KOTLIN_BRIDGE=1)
-    target_link_libraries(mindweave_bridge PUBLIC mindweave libace_napi.z.so libhilog_ndk.z.so)
-else()
-    message(WARNING "Using demo bridge fallback. mode=${MINDWEAVE_BRIDGE_MODE}")
-    target_link_libraries(mindweave_bridge PUBLIC libace_napi.z.so libhilog_ndk.z.so)
 endif()
+
+if(NOT MINDWEAVE_BRIDGE_MODE STREQUAL "kotlin")
+    message(FATAL_ERROR
+        "Real Harmony bridge requires mindweave_bridge_mode.txt to be 'kotlin'. "
+        "Current mode='${MINDWEAVE_BRIDGE_MODE}'. Republish the Harmony native outputs."
+    )
+endif()
+
+add_library(mindweave SHARED IMPORTED)
+set_target_properties(mindweave PROPERTIES
+    IMPORTED_LOCATION ${MINDWEAVE_SHARED_LIB}
+)
+target_compile_definitions(mindweave_bridge PRIVATE MINDWEAVE_USE_KOTLIN_BRIDGE=1)
+target_link_libraries(mindweave_bridge PUBLIC mindweave libace_napi.z.so libhilog_ndk.z.so)

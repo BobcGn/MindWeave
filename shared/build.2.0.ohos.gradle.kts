@@ -1,4 +1,5 @@
 import java.util.Locale
+import org.gradle.api.GradleException
 import org.gradle.api.tasks.Copy
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -135,15 +136,14 @@ sqldelight {
 
 val prepareHarmonyDemoBridge = tasks.register("prepareHarmonyDemoBridge") {
     group = "harmony"
-    description = "Switch harmonyApp to the built-in demo bridge fallback."
-    notCompatibleWithConfigurationCache("Writes bridge mode markers into harmonyApp.")
-    outputs.file(harmonyModeFile)
+    description = "Fail because the Harmony demo bridge fallback has been removed."
+    notCompatibleWithConfigurationCache("Fails explicitly because the demo bridge fallback is no longer supported.")
 
     doLast {
-        harmonyLibDir.asFile.mkdirs()
-        harmonyModeFile.asFile.writeText("demo\n")
-        println("Prepared harmonyApp demo bridge fallback.")
-        println("Next: open harmonyApp in DevEco Studio and build the entry HAP directly.")
+        throw GradleException(
+            "Harmony demo bridge fallback has been removed. " +
+                "Configure a real OHOS Kotlin/Native toolchain and run publishDebugBinariesToHarmonyApp.",
+        )
     }
 }
 
@@ -154,6 +154,7 @@ tasks.register("harmonyBuildDoctor") {
 
     doLast {
         println("mindweave.ohos.toolchain=${ohosToolchain.get()}")
+        println("mindweave.ohos.sqldelightVersion=$sqlDelightVersion")
         println("detected.kotlin.ohos.preset=${detectedPresetName ?: "none"}")
         println("native.target.available=$hasOhosTarget")
         println("published.lib.path=${harmonyLibFile.asFile.absolutePath}")
@@ -162,10 +163,12 @@ tasks.register("harmonyBuildDoctor") {
         if (harmonyModeFile.asFile.exists()) {
             println("bridge.mode=${harmonyModeFile.asFile.readText().trim()}")
         }
+        println("demo.bridge.supported=false")
         if (!hasOhosTarget) {
             println("No OHOS Kotlin preset is available in the active Gradle toolchain.")
-            println("Use -Pmindweave.ohos.toolchain=kba to try a Tencent KBA toolchain,")
-            println("or keep the default profile and run with the demo bridge fallback.")
+            println("Use -Pmindweave.ohos.toolchain=kba to enable a real Harmony Kotlin/Native build.")
+        } else {
+            println("A successful publish also requires a SQLDelight runtime/native-driver that exposes ohos_arm64 variants.")
         }
     }
 }
@@ -202,25 +205,22 @@ arrayOf("debug", "release").forEach { buildType ->
     } else {
         tasks.register(linkTaskName) {
             group = "harmony"
-            description = "Compatibility shim for environments without an OHOS Kotlin target."
-            notCompatibleWithConfigurationCache("Prints fallback diagnostics from Gradle script state.")
-            dependsOn(prepareHarmonyDemoBridge)
+            description = "Fail because a real OHOS Kotlin target is required."
+            notCompatibleWithConfigurationCache("Fails explicitly when no OHOS Kotlin target is available.")
 
             doLast {
-                println("OHOS Kotlin target is unavailable under the '${ohosToolchain.get()}' toolchain.")
-                println("Skipped native Kotlin build and prepared the demo bridge fallback instead.")
+                throw GradleException(
+                    "OHOS Kotlin target is unavailable under the '${ohosToolchain.get()}' toolchain. " +
+                        "A real Harmony bridge is required; no demo fallback is available.",
+                )
             }
         }
 
         tasks.register(publishTaskName) {
             group = "harmony"
-            description = "Prepare harmonyApp using the built-in demo bridge fallback."
-            notCompatibleWithConfigurationCache("Prints fallback diagnostics from Gradle script state.")
+            description = "Publish real Harmony native outputs or fail if no OHOS target is available."
+            notCompatibleWithConfigurationCache("Fails explicitly when no OHOS Kotlin target is available.")
             dependsOn(linkTaskName)
-
-            doLast {
-                println("No libmindweave.so was published because no OHOS Kotlin target is active.")
-            }
         }
     }
 }

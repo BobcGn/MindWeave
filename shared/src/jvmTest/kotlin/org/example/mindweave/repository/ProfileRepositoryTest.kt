@@ -27,7 +27,7 @@ class ProfileRepositoryTest {
         assertEquals(seeded.createdAtEpochMs, seeded.credentialsUpdatedAtEpochMs)
         assertNull(seeded.lastLoginAtEpochMs)
 
-        val authenticated = repository.authenticate(DEFAULT_BOOTSTRAP_USERNAME, DEFAULT_BOOTSTRAP_PASSWORD)
+        val authenticated = repository.authenticate("user-1", DEFAULT_BOOTSTRAP_USERNAME, DEFAULT_BOOTSTRAP_PASSWORD)
 
         assertNotNull(authenticated)
         assertTrue(authenticated.mustChangeCredentials)
@@ -69,9 +69,9 @@ class ProfileRepositoryTest {
         repository.ensureDefaultAccount("user-1")
 
         assertNull(repository.forceResetCredentials("user-1", "owner", "owner-pass"))
-        assertNull(repository.authenticate(DEFAULT_BOOTSTRAP_USERNAME, DEFAULT_BOOTSTRAP_PASSWORD))
+        assertNull(repository.authenticate("user-1", DEFAULT_BOOTSTRAP_USERNAME, DEFAULT_BOOTSTRAP_PASSWORD))
 
-        val authenticated = repository.authenticate("owner", "owner-pass")
+        val authenticated = repository.authenticate("user-1", "owner", "owner-pass")
         val stored = repository.getAccount("user-1")
 
         assertNotNull(authenticated)
@@ -80,6 +80,20 @@ class ProfileRepositoryTest {
         assertEquals("owner", stored.username)
         assertTrue(stored.credentialsUpdatedAtEpochMs > stored.createdAtEpochMs)
         assertNotNull(stored.lastLoginAtEpochMs)
+    }
+
+    @Test
+    fun authenticateShouldStayBoundToTheRequestedUserId() = runTest {
+        val repository = createRepository()
+        repository.ensureDefaultAccount("user-1")
+        assertNull(repository.forceResetCredentials("user-1", "owner-1", "owner-1-pass"))
+        repository.ensureDefaultAccount("user-2")
+        assertNull(repository.forceResetCredentials("user-2", "owner-2", "owner-2-pass"))
+
+        assertNull(repository.authenticate("user-1", "owner-2", "owner-2-pass"))
+        assertNull(repository.authenticate("user-2", "owner-1", "owner-1-pass"))
+        assertNotNull(repository.authenticate("user-1", "owner-1", "owner-1-pass"))
+        assertNotNull(repository.authenticate("user-2", "owner-2", "owner-2-pass"))
     }
 
     private fun createRepository(): SqlDelightAccountRepository {

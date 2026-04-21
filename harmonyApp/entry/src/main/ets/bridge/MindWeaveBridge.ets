@@ -131,8 +131,7 @@ export class MindWeaveBridge {
     return this.decode(nativeModule.bootstrap(JSON.stringify({
       databaseName: 'mindweave-harmony.db',
       deviceId: 'harmony-phone',
-      deviceName: 'Harmony Phone',
-      enableDemoData: true
+      deviceName: 'Harmony Phone'
     })));
   }
 

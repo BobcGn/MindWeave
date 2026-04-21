@@ -355,9 +355,9 @@ void EnsureDemoBootstrapped(DemoBridgeState& state) {
     state.diaries.push_back(DemoDiaryEntry{
         .id = "diary-1",
         .title = "欢迎来到 MindWeave",
-        .content = "当前鸿蒙端运行在 demo bridge 模式，可以直接在 DevEco Studio 里预览 UI 与交互流程。",
+        .content = "该占位桥接不应在正式构建中启用，请检查 Kotlin/Native 发布流程。",
         .mood = "CALM",
-        .ai_summary = "这是演示数据，帮助你快速验证页面与交互。",
+        .ai_summary = "如果看到这条数据，说明真实桥接没有正确接管。",
         .tags = {"HarmonyOS", "Demo"},
         .created_at_epoch_ms = now - 60 * 60 * 1000,
         .updated_at_epoch_ms = now - 60 * 60 * 1000
@@ -388,7 +388,7 @@ void EnsureDemoBootstrapped(DemoBridgeState& state) {
         .id = "message-1",
         .session_id = "chat-1",
         .role = "ASSISTANT",
-        .content = "当前为本地 demo bridge。你可以继续发送消息验证鸿蒙页面交互。",
+        .content = "该占位桥接仅用于提示配置错误，请切换到真实 Kotlin/Native 桥接。",
         .created_at_epoch_ms = now,
         .updated_at_epoch_ms = now
     });
@@ -540,7 +540,7 @@ std::string TruncateTitle(const std::string& value) {
 }
 
 std::string BuildAssistantReply(const std::string& prompt) {
-    return "已收到你的消息：" + Trim(prompt) + "。当前为鸿蒙演示桥接，界面已使用鸿蒙宿主实现，数据仍来自本地 demo 流。";
+    return "已收到你的消息：" + Trim(prompt) + "。当前构建应当使用真实 Kotlin/Native 桥接。";
 }
 
 std::string GetUtf8(napi_env env, napi_value value) {
@@ -582,276 +582,56 @@ std::string CallBridge(NullaryBridgeFn bridge_fn) {
     return response;
 }
 #else
+std::string MissingRealBridgeResponse() {
+    return R"({"ok":false,"message":"Harmony 真实桥接未就绪。请先发布 libmindweave.so，并以 kotlin 模式重新构建 entry 模块。"})";
+}
+
 std::string DemoBootstrap(const std::string&) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-    return BuildResponseJson(state, "已初始化 Harmony demo bridge。");
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoGetSnapshot(const std::string& payload) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-    const std::string selected_session_id = ExtractJsonString(payload, "selectedSessionId");
-    return BuildResponseJson(state, "已刷新本地 demo 快照。", selected_session_id);
+    (void)payload;
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoCaptureDiary(const std::string& payload) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-
-    const std::string title = Trim(ExtractJsonString(payload, "title"));
-    const std::string content = Trim(ExtractJsonString(payload, "content"));
-    const std::string mood = Trim(ExtractJsonString(payload, "mood"));
-    std::vector<std::string> tags = ExtractJsonStringArray(payload, "tags");
-    if (tags.empty()) {
-        tags = {"HarmonyOS", "Demo"};
-    }
-    const int64_t now = NowEpochMs();
-
-    state.diary_counter += 1;
-    state.diaries.insert(state.diaries.begin(), DemoDiaryEntry{
-        .id = "diary-" + std::to_string(state.diary_counter),
-        .title = title.empty() ? "未命名日记" : title,
-        .content = content.empty() ? "未输入正文。" : content,
-        .mood = mood.empty() ? "CALM" : mood,
-        .ai_summary = "Demo bridge 已记录这条日记。",
-        .tags = tags,
-        .created_at_epoch_ms = now,
-        .updated_at_epoch_ms = now
-    });
-    state.pending_changes += 1;
-
-    return BuildResponseJson(state, "已保存日记到 Harmony demo bridge。");
+    (void)payload;
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoCaptureSchedule(const std::string& payload) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-
-    const std::string title = Trim(ExtractJsonString(payload, "title"));
-    const std::string description = Trim(ExtractJsonString(payload, "description"));
-    const int64_t start_time = ExtractJsonInt64(payload, "startTimeEpochMs", NowEpochMs());
-    const int64_t end_time = ExtractJsonInt64(payload, "endTimeEpochMs", start_time + 60 * 60 * 1000);
-    const std::string type = Trim(ExtractJsonString(payload, "type"));
-    const int64_t now = NowEpochMs();
-
-    state.schedule_counter += 1;
-    state.schedules.insert(state.schedules.begin(), DemoScheduleEvent{
-        .id = "schedule-" + std::to_string(state.schedule_counter),
-        .title = title.empty() ? "未命名日程" : title,
-        .description = description,
-        .start_time_epoch_ms = start_time,
-        .end_time_epoch_ms = end_time,
-        .type = type.empty() ? "WORK" : type,
-        .created_at_epoch_ms = now,
-        .updated_at_epoch_ms = now
-    });
-    state.pending_changes += 1;
-
-    return BuildResponseJson(state, "已保存日程到 Harmony demo bridge。");
+    (void)payload;
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoSendChatMessage(const std::string& payload) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-
-    const std::string requested_session_id = ExtractJsonString(payload, "existingSessionId");
-    const std::string prompt = Trim(ExtractJsonString(payload, "prompt"));
-    const int64_t now = NowEpochMs();
-
-    std::string session_id = ResolveFocusSessionId(state, requested_session_id);
-    if (session_id.empty()) {
-        state.chat_counter += 1;
-        session_id = "chat-" + std::to_string(state.chat_counter);
-        state.chat_sessions.insert(state.chat_sessions.begin(), DemoChatSession{
-            .id = session_id,
-            .title = TruncateTitle(prompt),
-            .created_at_epoch_ms = now,
-            .updated_at_epoch_ms = now
-        });
-    }
-
-    auto session_it = std::find_if(
-        state.chat_sessions.begin(),
-        state.chat_sessions.end(),
-        [&](const DemoChatSession& session) { return session.id == session_id; }
-    );
-    if (session_it != state.chat_sessions.end()) {
-        session_it->updated_at_epoch_ms = now;
-        if (session_it->title == "新会话" && !prompt.empty()) {
-            session_it->title = TruncateTitle(prompt);
-        }
-        DemoChatSession updated = *session_it;
-        state.chat_sessions.erase(session_it);
-        state.chat_sessions.insert(state.chat_sessions.begin(), updated);
-    }
-
-    state.message_counter += 1;
-    state.chat_messages.push_back(DemoChatMessage{
-        .id = "message-" + std::to_string(state.message_counter),
-        .session_id = session_id,
-        .role = "USER",
-        .content = prompt.empty() ? "未输入消息。" : prompt,
-        .created_at_epoch_ms = now,
-        .updated_at_epoch_ms = now
-    });
-
-    state.message_counter += 1;
-    state.chat_messages.push_back(DemoChatMessage{
-        .id = "message-" + std::to_string(state.message_counter),
-        .session_id = session_id,
-        .role = "ASSISTANT",
-        .content = BuildAssistantReply(prompt.empty() ? "空消息" : prompt),
-        .created_at_epoch_ms = now + 1,
-        .updated_at_epoch_ms = now + 1
-    });
-    state.pending_changes += 1;
-
-    return BuildResponseJson(state, "已通过 Harmony demo bridge 生成回复。", session_id, session_id);
+    (void)payload;
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoRunSync() {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-    state.last_sync_seq += 1;
-    state.pending_changes = 0;
-    return BuildResponseJson(state, "Harmony demo bridge 已完成本地同步。");
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoSavePreferences(const std::string& payload) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-
-    const std::string ai_mode = Trim(ExtractJsonString(payload, "aiMode"));
-    if (!ai_mode.empty()) {
-        state.ai_mode = ai_mode;
-        if (ai_mode == "LOCAL_FIRST_CLOUD_ENHANCEMENT") {
-            state.ai_mode_label = "本地优先";
-        } else if (ai_mode == "MANUAL_CLOUD_ENHANCEMENT") {
-            state.ai_mode_label = "手动云增强";
-        } else if (ai_mode == "DISABLED") {
-            state.ai_mode_label = "完全关闭";
-        } else {
-            state.ai_mode_label = "仅本地";
-        }
-    }
-
-    const std::string cloud_base_url = Trim(ExtractJsonString(payload, "cloudEnhancementBaseUrl"));
-    state.cloud_enhancement_base_url = cloud_base_url;
-
-    const std::string lightweight_package_id = Trim(ExtractJsonString(payload, "localLightweightModelPackageId"));
-    if (!lightweight_package_id.empty()) {
-        state.local_lightweight_model_package_id = lightweight_package_id;
-    }
-
-    const std::string generative_package_id = Trim(ExtractJsonString(payload, "localGenerativeModelPackageId"));
-    if (!generative_package_id.empty()) {
-        state.local_generative_model_package_id = generative_package_id;
-    }
-
-    const std::string model_download_policy = Trim(ExtractJsonString(payload, "modelDownloadPolicy"));
-    if (!model_download_policy.empty()) {
-        state.model_download_policy = model_download_policy;
-        if (model_download_policy == "WIFI_ONLY") {
-            state.model_download_policy_label = "仅 Wi-Fi";
-        } else if (model_download_policy == "MANUAL_ONLY") {
-            state.model_download_policy_label = "手动下载";
-        } else if (model_download_policy == "BACKGROUND_ALLOWED") {
-            state.model_download_policy_label = "允许后台";
-        } else {
-            state.model_download_policy_label = "预置模型";
-        }
-    }
-
-    state.pending_changes += 1;
-    return BuildResponseJson(state, "已保存 demo 偏好设置。");
+    (void)payload;
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoAuthenticate(const std::string& payload) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-
-    const std::string username = Trim(ExtractJsonString(payload, "username"));
-    const std::string password = ExtractJsonString(payload, "password");
-    if (username != state.username || password != state.password) {
-        return BuildResponseJson(state, "账号或密码错误。", "", "", false);
-    }
-
-    state.last_login_at_epoch_ms = NowEpochMs();
-    return BuildResponseJson(
-        state,
-        state.must_change_credentials ? "首次使用请先修改账号和密码。" : "登录成功。"
-    );
+    (void)payload;
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoForceResetCredentials(const std::string& payload) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-
-    const std::string new_username = Trim(ExtractJsonString(payload, "newUsername"));
-    const std::string new_password = ExtractJsonString(payload, "newPassword");
-    if (new_username.empty()) {
-        return BuildResponseJson(state, "账号不能为空。", "", "", false);
-    }
-    if (new_password.empty()) {
-        return BuildResponseJson(state, "密码不能为空。", "", "", false);
-    }
-    if (new_username == "MindWeave") {
-        return BuildResponseJson(state, "默认账号不能继续使用，请更换为个人账号。", "", "", false);
-    }
-    if (new_password == "MindWeave") {
-        return BuildResponseJson(state, "默认密码不能继续使用，请设置新密码。", "", "", false);
-    }
-
-    const int64_t now = NowEpochMs();
-    state.username = new_username;
-    state.password = new_password;
-    state.must_change_credentials = false;
-    state.updated_at_epoch_ms = now;
-    state.credentials_updated_at_epoch_ms = now;
-    return BuildResponseJson(state, "默认凭据已停用，后续请使用新账号和密码登录。");
+    (void)payload;
+    return MissingRealBridgeResponse();
 }
 
 std::string DemoChangeCredentials(const std::string& payload) {
-    std::lock_guard<std::mutex> lock(DemoStateMutex());
-    DemoBridgeState& state = DemoState();
-    EnsureDemoBootstrapped(state);
-
-    const std::string current_password = ExtractJsonString(payload, "currentPassword");
-    const std::string new_username = Trim(ExtractJsonString(payload, "newUsername"));
-    const std::string new_password = ExtractJsonString(payload, "newPassword");
-    if (current_password != state.password) {
-        return BuildResponseJson(state, "当前密码不正确。", "", "", false);
-    }
-    if (new_username.empty()) {
-        return BuildResponseJson(state, "账号不能为空。", "", "", false);
-    }
-    if (new_password.empty()) {
-        return BuildResponseJson(state, "密码不能为空。", "", "", false);
-    }
-    if (new_username == "MindWeave") {
-        return BuildResponseJson(state, "默认账号不能继续使用，请更换为个人账号。", "", "", false);
-    }
-    if (new_password == "MindWeave") {
-        return BuildResponseJson(state, "默认密码不能继续使用，请设置新密码。", "", "", false);
-    }
-
-    const int64_t now = NowEpochMs();
-    state.username = new_username;
-    state.password = new_password;
-    state.must_change_credentials = false;
-    state.updated_at_epoch_ms = now;
-    state.credentials_updated_at_epoch_ms = now;
-    return BuildResponseJson(state, "账户信息已更新。下次登录请使用新凭据。");
+    (void)payload;
+    return MissingRealBridgeResponse();
 }
 #endif
 

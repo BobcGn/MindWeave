@@ -14,19 +14,19 @@ tasks.register("harmonyBuildDoctor") {
 
 tasks.register("prepareHarmonyDemoBridge") {
     group = "harmony"
-    description = "Switch harmonyApp to the built-in demo bridge fallback."
+    description = "Fail because the Harmony demo bridge fallback has been removed."
     dependsOn(":shared:prepareHarmonyDemoBridge")
 }
 
 tasks.register("publishDebugBinariesToHarmonyApp") {
     group = "harmony"
-    description = "Publish Debug native outputs for harmonyApp, or prepare the demo bridge fallback."
+    description = "Publish Debug real native outputs for harmonyApp."
     dependsOn(":shared:publishDebugBinariesToHarmonyApp")
 }
 
 tasks.register("publishReleaseBinariesToHarmonyApp") {
     group = "harmony"
-    description = "Publish Release native outputs for harmonyApp, or prepare the demo bridge fallback."
+    description = "Publish Release real native outputs for harmonyApp."
     dependsOn(":shared:publishReleaseBinariesToHarmonyApp")
 }
 

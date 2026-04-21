@@ -387,7 +387,7 @@ struct Index {
   }
 
   private bridgeModeLabel(): string {
-    return this.statusMessage.indexOf('demo bridge') >= 0 ? '演示桥接' : '共享桥接';
+    return '共享桥接';
   }
 
   private selectedSection(): SectionOption {
@@ -489,7 +489,7 @@ struct Index {
     Column({ space: 18 }) {
       this.authFrame(
         '正在准备本地账户与配置',
-        '首次启动会自动创建默认账户、AI 策略与演示数据。'
+        '首次启动会自动创建默认账户、本地 SQLite 结构与 AI 策略。'
       );
       Text('MindWeave 会先完成本地初始化，再进入登录流程。')
         .fontSize(14)
@@ -603,7 +603,7 @@ struct Index {
           Text(this.bridgeModeLabel())
             .fontSize(12)
             .fontColor('#FFF7F2')
-            .backgroundColor(this.bridgeModeLabel() === '演示桥接' ? '#B26A3F' : '#55726E')
+            .backgroundColor('#55726E')
             .padding({ left: 12, right: 12, top: 6, bottom: 6 })
             .borderRadius(16);
           Text(`设备：${this.snapshot.session.deviceName}`)

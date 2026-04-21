@@ -32,7 +32,6 @@ data class HarmonyBridgeInitRequest(
     val localLightweightModelPackageId: String = AiSettings.DEFAULT_LIGHTWEIGHT_MODEL_PACKAGE_ID,
     val localGenerativeModelPackageId: String = AiSettings.DEFAULT_GENERATIVE_MODEL_PACKAGE_ID,
     val modelDownloadPolicy: String = ModelDownloadPolicy.PREBUNDLED.name,
-    val enableDemoData: Boolean = true,
 )
 
 @Serializable
@@ -141,12 +140,9 @@ class MindWeaveHarmonyBridgeController(
     suspend fun bootstrap(initRequest: HarmonyBridgeInitRequest): HarmonyBridgeResponse {
         graph.accountRepository.ensureDefaultAccount(graph.session.userId)
         graph.userPreferencesRepository.ensureDefaultPreferences(graph.session.userId, initRequest.toAiSettings())
-        if (initRequest.enableDemoData) {
-            graph.facade.seedDemoData()
-        }
         return snapshot(
             request = HarmonyBridgeSnapshotRequest(),
-            message = "Harmony bridge 已初始化。",
+            message = "Harmony 本地桥接已初始化，SQLite 与账户配置已就绪。",
         )
     }
 
@@ -246,6 +242,7 @@ class MindWeaveHarmonyBridgeController(
 
     suspend fun authenticate(request: HarmonyBridgeAuthenticateRequest): HarmonyBridgeResponse {
         val account = graph.accountRepository.authenticate(
+            userId = graph.session.userId,
             username = request.username,
             password = request.password,
         )

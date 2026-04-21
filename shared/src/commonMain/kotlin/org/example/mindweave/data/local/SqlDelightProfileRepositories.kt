@@ -37,11 +37,13 @@ class SqlDelightAccountRepository(
     override suspend fun getAccount(userId: String): UserAccount? =
         queries.selectAccountByUserId(userId, ::mapAccount).executeAsOneOrNull()
 
-    override suspend fun authenticate(username: String, password: String): UserAccount? {
+    override suspend fun authenticate(userId: String, username: String, password: String): UserAccount? {
         val normalizedUsername = username.trim()
         if (normalizedUsername.isBlank() || password.isBlank()) return null
-        val account = queries.selectAccountByUsername(normalizedUsername, ::mapAccount).executeAsOneOrNull()
-            ?: return null
+        val account = getAccount(userId) ?: return null
+        if (account.username != normalizedUsername) {
+            return null
+        }
         if (account.passwordHash != hashPassword(password)) {
             return null
         }

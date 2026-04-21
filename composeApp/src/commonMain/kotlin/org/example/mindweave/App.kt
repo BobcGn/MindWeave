@@ -199,7 +199,11 @@ fun App(
             } else {
                 authBusy = true
                 scope.launch {
-                    val authenticatedAccount = graph.accountRepository.authenticate(loginUsername, loginPassword)
+                    val authenticatedAccount = graph.accountRepository.authenticate(
+                        userId = graph.session.userId,
+                        username = loginUsername,
+                        password = loginPassword,
+                    )
                     authBusy = false
                     if (authenticatedAccount == null) {
                         loginStatusLine = "账号或密码错误。"

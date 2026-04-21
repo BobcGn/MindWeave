@@ -44,10 +44,23 @@ fi
 echo "${BUILD_OUTPUT}"
 
 MODE_FILE="${ROOT_DIR}/harmonyApp/entry/src/main/libs/arm64-v8a/mindweave_bridge_mode.txt"
+LIB_FILE="${ROOT_DIR}/harmonyApp/entry/src/main/libs/arm64-v8a/libmindweave.so"
 BRIDGE_MODE="auto"
 
 if [[ -f "${MODE_FILE}" ]]; then
   BRIDGE_MODE="$(tr -d '[:space:]' < "${MODE_FILE}")"
+fi
+
+if [[ ! -f "${LIB_FILE}" ]]; then
+  echo "Expected real Harmony bridge library is missing: ${LIB_FILE}" >&2
+  echo "Configure an OHOS Kotlin/Native toolchain and rerun the publish task." >&2
+  exit 1
+fi
+
+if [[ "${BRIDGE_MODE}" != "kotlin" ]]; then
+  echo "Expected bridge mode 'kotlin', but found '${BRIDGE_MODE}'." >&2
+  echo "Republish the Harmony native outputs before opening DevEco Studio." >&2
+  exit 1
 fi
 
 echo

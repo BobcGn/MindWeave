@@ -8,7 +8,7 @@ interface AccountRepository {
 
     suspend fun getAccount(userId: String): UserAccount?
 
-    suspend fun authenticate(username: String, password: String): UserAccount?
+    suspend fun authenticate(userId: String, username: String, password: String): UserAccount?
 
     suspend fun ensureDefaultAccount(userId: String)
 
