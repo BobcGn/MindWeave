@@ -12,6 +12,6 @@ actual class DriverFactory actual constructor(
         AndroidSqliteDriver(
             schema = MindWeaveDatabase.Schema,
             context = platformContext.context,
-            name = "mindweave.db",
+            name = platformContext.databaseName,
         )
 }

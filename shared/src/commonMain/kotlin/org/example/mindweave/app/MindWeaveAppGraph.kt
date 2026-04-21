@@ -26,12 +26,12 @@ fun createMindWeaveAppGraph(
     platformContext: PlatformContext,
     aiSettings: AiSettings = AiSettings.LocalOnly(),
     syncApi: SyncApi = InMemorySyncApi(),
-): MindWeaveAppGraph {
-    val session = AppSession(
+    session: AppSession = AppSession(
         userId = "local-user",
         deviceId = "local-device",
         deviceName = "MindWeave Device",
-    )
+    ),
+): MindWeaveAppGraph {
     val database = MindWeaveDatabase(DriverFactory(platformContext).createDriver())
     val repositories = createLocalRepositories(database, session)
     val contextAssembler = ChatContextAssembler(

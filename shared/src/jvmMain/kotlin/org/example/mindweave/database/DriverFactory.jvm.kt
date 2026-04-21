@@ -7,11 +7,11 @@ import org.example.mindweave.db.MindWeaveDatabase
 import org.example.mindweave.platform.PlatformContext
 
 actual class DriverFactory actual constructor(
-    platformContext: PlatformContext,
+    private val platformContext: PlatformContext,
 ) {
     actual fun createDriver(): SqlDriver =
         JdbcSqliteDriver(
-            url = "jdbc:sqlite:mindweave.db",
+            url = "jdbc:sqlite:${platformContext.databaseName}",
             properties = Properties(),
             schema = MindWeaveDatabase.Schema,
         )
