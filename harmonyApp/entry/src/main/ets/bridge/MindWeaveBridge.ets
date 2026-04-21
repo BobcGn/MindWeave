@@ -18,6 +18,7 @@ export interface BridgeDiaryEntry {
   content: string;
   mood: string;
   aiSummary?: string;
+  createdAtEpochMs: number;
   updatedAtEpochMs: number;
 }
 
@@ -33,11 +34,14 @@ export interface BridgeScheduleEvent {
   startTimeEpochMs: number;
   endTimeEpochMs: number;
   type: string;
+  createdAtEpochMs: number;
+  updatedAtEpochMs: number;
 }
 
 export interface BridgeChatSession {
   id: string;
   title: string;
+  createdAtEpochMs: number;
   updatedAtEpochMs: number;
 }
 
@@ -46,12 +50,16 @@ export interface BridgeChatMessage {
   sessionId: string;
   role: string;
   content: string;
+  createdAtEpochMs: number;
   updatedAtEpochMs: number;
 }
 
 export interface BridgeAccountState {
   username: string;
   mustChangeCredentials: boolean;
+  createdAtEpochMs: number;
+  updatedAtEpochMs: number;
+  credentialsUpdatedAtEpochMs: number;
   lastLoginAtEpochMs?: number;
 }
 
@@ -92,6 +100,9 @@ interface NativeBridgeModule {
   sendChatMessage(request: string): string;
   runSync(): string;
   savePreferences(request: string): string;
+  authenticate(request: string): string;
+  forceResetCredentials(request: string): string;
+  changeCredentials(request: string): string;
 }
 
 const nativeModule = nativeMindWeaveBridge as NativeBridgeModule;
@@ -140,6 +151,15 @@ export class MindWeaveBridge {
     })));
   }
 
+  captureDiaryWithDetails(title: string, content: string, mood: string, tags: string[]): BridgeResponse {
+    return this.decode(nativeModule.captureDiary(JSON.stringify({
+      title,
+      content,
+      mood,
+      tags
+    })));
+  }
+
   captureSchedule(title: string, description: string, startTimeEpochMs: number, endTimeEpochMs: number): BridgeResponse {
     return this.decode(nativeModule.captureSchedule(JSON.stringify({
       title,
@@ -148,6 +168,23 @@ export class MindWeaveBridge {
       endTimeEpochMs,
       remindAtEpochMs: startTimeEpochMs - 15 * 60 * 1000,
       type: 'WORK'
+    })));
+  }
+
+  captureScheduleWithType(
+    title: string,
+    description: string,
+    startTimeEpochMs: number,
+    endTimeEpochMs: number,
+    type: string
+  ): BridgeResponse {
+    return this.decode(nativeModule.captureSchedule(JSON.stringify({
+      title,
+      description,
+      startTimeEpochMs,
+      endTimeEpochMs,
+      remindAtEpochMs: startTimeEpochMs - 15 * 60 * 1000,
+      type
     })));
   }
 
@@ -160,6 +197,44 @@ export class MindWeaveBridge {
 
   runSync(): BridgeResponse {
     return this.decode(nativeModule.runSync());
+  }
+
+  savePreferences(
+    aiMode: string,
+    cloudEnhancementBaseUrl: string,
+    localLightweightModelPackageId: string,
+    localGenerativeModelPackageId: string,
+    modelDownloadPolicy: string
+  ): BridgeResponse {
+    return this.decode(nativeModule.savePreferences(JSON.stringify({
+      aiMode,
+      cloudEnhancementBaseUrl,
+      localLightweightModelPackageId,
+      localGenerativeModelPackageId,
+      modelDownloadPolicy
+    })));
+  }
+
+  authenticate(username: string, password: string): BridgeResponse {
+    return this.decode(nativeModule.authenticate(JSON.stringify({
+      username,
+      password
+    })));
+  }
+
+  forceResetCredentials(newUsername: string, newPassword: string): BridgeResponse {
+    return this.decode(nativeModule.forceResetCredentials(JSON.stringify({
+      newUsername,
+      newPassword
+    })));
+  }
+
+  changeCredentials(currentPassword: string, newUsername: string, newPassword: string): BridgeResponse {
+    return this.decode(nativeModule.changeCredentials(JSON.stringify({
+      currentPassword,
+      newUsername,
+      newPassword
+    })));
   }
 
   private decode(raw: string): BridgeResponse {

@@ -1,23 +1,39 @@
 {
-  "apiType": "stageMode",
-  "buildOption": {
-    "strictMode": {
-      "caseSensitiveCheck": true
-    }
+  "app": {
+    "signingConfigs": [],
+    "products": [
+      {
+        "name": "default",
+        "compatibleSdkVersion": "5.0.0(12)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "useNormalizedOHMUrl": true,
+            "caseSensitiveCheck": true
+          }
+        },
+        "targetSdkVersion": "6.0.1(21)"
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ]
   },
-  "targets": [
-    {
-      "name": "default",
-      "runtimeOS": "HarmonyOS"
-    }
-  ],
   "modules": [
     {
       "name": "entry",
       "srcPath": "./entry",
       "targets": [
         {
-          "name": "default"
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
         }
       ]
     }

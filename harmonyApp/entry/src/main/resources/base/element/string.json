@@ -1,6 +1,18 @@
 {
   "string": [
     {
+      "name": "entry_ability_label",
+      "value": "MindWeave"
+    },
+    {
+      "name": "module_desc",
+      "value": "MindWeave Harmony host shell"
+    },
+    {
+      "name": "entry_ability_desc",
+      "value": "MindWeave entry ability"
+    },
+    {
       "name": "module_label",
       "value": "MindWeave"
     }

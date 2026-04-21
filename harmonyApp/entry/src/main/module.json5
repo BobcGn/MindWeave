@@ -2,11 +2,16 @@
   "module": {
     "name": "entry",
     "type": "entry",
-    "description": "MindWeave Harmony host shell",
+    "description": "$string:module_desc",
     "mainElement": "EntryAbility",
     "deviceTypes": [
       "phone",
       "tablet"
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      }
     ],
     "deliveryWithInstall": true,
     "installationFree": false,
@@ -15,8 +20,11 @@
       {
         "name": "EntryAbility",
         "srcEntry": "./ets/entryability/EntryAbility.ets",
-        "description": "MindWeave entry ability",
-        "label": "MindWeave",
+        "description": "$string:entry_ability_desc",
+        "icon": "$media:app_icon",
+        "label": "$string:entry_ability_label",
+        "startWindowIcon": "$media:app_icon",
+        "startWindowBackground": "$color:start_window_background",
         "exported": true,
         "skills": [
           {

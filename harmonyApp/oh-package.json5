@@ -1,4 +1,10 @@
 {
-  "modelVersion": "5.0.0",
-  "description": "MindWeave Harmony host shell"
+  "modelVersion": "6.1.0",
+  "name": "harmonyApp",
+  "version": "1.0.0",
+  "description": "MindWeave Harmony host shell",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {},
 }

@@ -24,6 +24,7 @@ struct DemoDiaryEntry {
     std::string mood;
     std::string ai_summary;
     std::vector<std::string> tags;
+    int64_t created_at_epoch_ms;
     int64_t updated_at_epoch_ms;
 };
 
@@ -34,11 +35,14 @@ struct DemoScheduleEvent {
     int64_t start_time_epoch_ms;
     int64_t end_time_epoch_ms;
     std::string type;
+    int64_t created_at_epoch_ms;
+    int64_t updated_at_epoch_ms;
 };
 
 struct DemoChatSession {
     std::string id;
     std::string title;
+    int64_t created_at_epoch_ms;
     int64_t updated_at_epoch_ms;
 };
 
@@ -47,6 +51,7 @@ struct DemoChatMessage {
     std::string session_id;
     std::string role;
     std::string content;
+    int64_t created_at_epoch_ms;
     int64_t updated_at_epoch_ms;
 };
 
@@ -57,15 +62,19 @@ struct DemoBridgeState {
     std::string device_id = "harmony-phone";
     std::string device_name = "Harmony Phone";
     std::string username = "MindWeave";
-    bool must_change_credentials = false;
+    std::string password = "MindWeave";
+    bool must_change_credentials = true;
+    int64_t created_at_epoch_ms = 0;
+    int64_t updated_at_epoch_ms = 0;
+    int64_t credentials_updated_at_epoch_ms = 0;
     int64_t last_login_at_epoch_ms = 0;
     std::string ai_mode = "LOCAL_ONLY";
     std::string ai_mode_label = "仅本地";
     std::string cloud_enhancement_base_url;
-    std::string local_lightweight_model_package_id = "org.example.mindweave.light";
-    std::string local_generative_model_package_id = "org.example.mindweave.gen";
-    std::string model_download_policy = "WIFI_ONLY";
-    std::string model_download_policy_label = "仅 Wi-Fi";
+    std::string local_lightweight_model_package_id = "mindweave-lite-core";
+    std::string local_generative_model_package_id = "mindweave-gen-core";
+    std::string model_download_policy = "PREBUNDLED";
+    std::string model_download_policy_label = "预置模型";
     int64_t pending_changes = 0;
     int64_t last_sync_seq = 0;
     int64_t diary_counter = 0;
@@ -222,6 +231,84 @@ int64_t ExtractJsonInt64(const std::string& json, const std::string& key, int64_
     return std::stoll(json.substr(value_pos, end_pos - value_pos));
 }
 
+std::vector<std::string> ExtractJsonStringArray(const std::string& json, const std::string& key) {
+    const std::string pattern = "\"" + key + "\"";
+    size_t key_pos = json.find(pattern);
+    if (key_pos == std::string::npos) {
+        return {};
+    }
+    size_t colon_pos = json.find(':', key_pos + pattern.size());
+    if (colon_pos == std::string::npos) {
+        return {};
+    }
+    size_t value_pos = json.find('[', colon_pos + 1);
+    if (value_pos == std::string::npos) {
+        return {};
+    }
+    ++value_pos;
+
+    std::vector<std::string> values;
+    while (value_pos < json.size()) {
+        while (value_pos < json.size() && std::isspace(static_cast<unsigned char>(json[value_pos])) != 0) {
+            ++value_pos;
+        }
+        if (value_pos >= json.size() || json[value_pos] == ']') {
+            break;
+        }
+        if (json[value_pos] != '"') {
+            ++value_pos;
+            continue;
+        }
+        ++value_pos;
+
+        std::string value;
+        bool escaping = false;
+        while (value_pos < json.size()) {
+            const char ch = json[value_pos++];
+            if (escaping) {
+                switch (ch) {
+                    case '"':
+                        value.push_back('"');
+                        break;
+                    case '\\':
+                        value.push_back('\\');
+                        break;
+                    case 'n':
+                        value.push_back('\n');
+                        break;
+                    case 'r':
+                        value.push_back('\r');
+                        break;
+                    case 't':
+                        value.push_back('\t');
+                        break;
+                    default:
+                        value.push_back(ch);
+                        break;
+                }
+                escaping = false;
+                continue;
+            }
+            if (ch == '\\') {
+                escaping = true;
+                continue;
+            }
+            if (ch == '"') {
+                break;
+            }
+            value.push_back(ch);
+        }
+        values.push_back(value);
+        while (value_pos < json.size() && json[value_pos] != ',' && json[value_pos] != ']') {
+            ++value_pos;
+        }
+        if (value_pos < json.size() && json[value_pos] == ',') {
+            ++value_pos;
+        }
+    }
+    return values;
+}
+
 std::string BuildStringArrayJson(const std::vector<std::string>& values) {
     std::ostringstream out;
     out << "[";
@@ -258,9 +345,11 @@ void EnsureDemoBootstrapped(DemoBridgeState& state) {
     }
 
     state.bootstrapped = true;
-    state.last_login_at_epoch_ms = NowEpochMs();
-
     const int64_t now = NowEpochMs();
+    state.created_at_epoch_ms = now;
+    state.updated_at_epoch_ms = now;
+    state.credentials_updated_at_epoch_ms = now;
+    state.last_login_at_epoch_ms = 0;
 
     state.diary_counter = 1;
     state.diaries.push_back(DemoDiaryEntry{
@@ -270,6 +359,7 @@ void EnsureDemoBootstrapped(DemoBridgeState& state) {
         .mood = "CALM",
         .ai_summary = "这是演示数据，帮助你快速验证页面与交互。",
         .tags = {"HarmonyOS", "Demo"},
+        .created_at_epoch_ms = now - 60 * 60 * 1000,
         .updated_at_epoch_ms = now - 60 * 60 * 1000
     });
 
@@ -280,13 +370,16 @@ void EnsureDemoBootstrapped(DemoBridgeState& state) {
         .description = "确认日记、日程、聊天和同步按钮都能正常操作。",
         .start_time_epoch_ms = now + 60 * 60 * 1000,
         .end_time_epoch_ms = now + 2 * 60 * 60 * 1000,
-        .type = "WORK"
+        .type = "WORK",
+        .created_at_epoch_ms = now,
+        .updated_at_epoch_ms = now
     });
 
     state.chat_counter = 1;
     state.chat_sessions.push_back(DemoChatSession{
         .id = "chat-1",
         .title = "Harmony Demo",
+        .created_at_epoch_ms = now,
         .updated_at_epoch_ms = now
     });
 
@@ -296,6 +389,7 @@ void EnsureDemoBootstrapped(DemoBridgeState& state) {
         .session_id = "chat-1",
         .role = "ASSISTANT",
         .content = "当前为本地 demo bridge。你可以继续发送消息验证鸿蒙页面交互。",
+        .created_at_epoch_ms = now,
         .updated_at_epoch_ms = now
     });
 }
@@ -314,6 +408,9 @@ std::string BuildSnapshotJson(const DemoBridgeState& state, const std::string& s
     out << "\"account\":{";
     out << "\"username\":" << Quote(state.username) << ",";
     out << "\"mustChangeCredentials\":" << (state.must_change_credentials ? "true" : "false") << ",";
+    out << "\"createdAtEpochMs\":" << state.created_at_epoch_ms << ",";
+    out << "\"updatedAtEpochMs\":" << state.updated_at_epoch_ms << ",";
+    out << "\"credentialsUpdatedAtEpochMs\":" << state.credentials_updated_at_epoch_ms << ",";
     out << "\"lastLoginAtEpochMs\":" << state.last_login_at_epoch_ms;
     out << "},";
     out << "\"preferences\":{";
@@ -339,6 +436,7 @@ std::string BuildSnapshotJson(const DemoBridgeState& state, const std::string& s
         out << "\"content\":" << Quote(diary.content) << ",";
         out << "\"mood\":" << Quote(diary.mood) << ",";
         out << "\"aiSummary\":" << Quote(diary.ai_summary) << ",";
+        out << "\"createdAtEpochMs\":" << diary.created_at_epoch_ms << ",";
         out << "\"updatedAtEpochMs\":" << diary.updated_at_epoch_ms;
         out << "},";
         out << "\"tags\":" << BuildStringArrayJson(diary.tags);
@@ -358,7 +456,9 @@ std::string BuildSnapshotJson(const DemoBridgeState& state, const std::string& s
         out << "\"description\":" << Quote(schedule.description) << ",";
         out << "\"startTimeEpochMs\":" << schedule.start_time_epoch_ms << ",";
         out << "\"endTimeEpochMs\":" << schedule.end_time_epoch_ms << ",";
-        out << "\"type\":" << Quote(schedule.type);
+        out << "\"type\":" << Quote(schedule.type) << ",";
+        out << "\"createdAtEpochMs\":" << schedule.created_at_epoch_ms << ",";
+        out << "\"updatedAtEpochMs\":" << schedule.updated_at_epoch_ms;
         out << "}";
     }
     out << "],";
@@ -372,6 +472,7 @@ std::string BuildSnapshotJson(const DemoBridgeState& state, const std::string& s
         out << "{";
         out << "\"id\":" << Quote(session.id) << ",";
         out << "\"title\":" << Quote(session.title) << ",";
+        out << "\"createdAtEpochMs\":" << session.created_at_epoch_ms << ",";
         out << "\"updatedAtEpochMs\":" << session.updated_at_epoch_ms;
         out << "}";
     }
@@ -392,6 +493,7 @@ std::string BuildSnapshotJson(const DemoBridgeState& state, const std::string& s
         out << "\"sessionId\":" << Quote(message.session_id) << ",";
         out << "\"role\":" << Quote(message.role) << ",";
         out << "\"content\":" << Quote(message.content) << ",";
+        out << "\"createdAtEpochMs\":" << message.created_at_epoch_ms << ",";
         out << "\"updatedAtEpochMs\":" << message.updated_at_epoch_ms;
         out << "}";
     }
@@ -409,13 +511,14 @@ std::string BuildResponseJson(
     const DemoBridgeState& state,
     const std::string& message,
     const std::string& selected_session_id = "",
-    const std::string& focus_session_id = ""
+    const std::string& focus_session_id = "",
+    bool ok = true
 ) {
     const std::string resolved_focus_session_id = ResolveFocusSessionId(state, focus_session_id.empty() ? selected_session_id : focus_session_id);
 
     std::ostringstream out;
     out << "{";
-    out << "\"ok\":true,";
+    out << "\"ok\":" << (ok ? "true" : "false") << ",";
     out << "\"message\":" << Quote(message) << ",";
     if (!resolved_focus_session_id.empty()) {
         out << "\"focusSessionId\":" << Quote(resolved_focus_session_id) << ",";
@@ -437,7 +540,7 @@ std::string TruncateTitle(const std::string& value) {
 }
 
 std::string BuildAssistantReply(const std::string& prompt) {
-    return "已收到你的消息：" + Trim(prompt) + "。当前为鸿蒙 demo bridge，尚未接入 Kotlin/Native 共享层。";
+    return "已收到你的消息：" + Trim(prompt) + "。当前为鸿蒙演示桥接，界面已使用鸿蒙宿主实现，数据仍来自本地 demo 流。";
 }
 
 std::string GetUtf8(napi_env env, napi_value value) {
@@ -501,6 +604,11 @@ std::string DemoCaptureDiary(const std::string& payload) {
 
     const std::string title = Trim(ExtractJsonString(payload, "title"));
     const std::string content = Trim(ExtractJsonString(payload, "content"));
+    const std::string mood = Trim(ExtractJsonString(payload, "mood"));
+    std::vector<std::string> tags = ExtractJsonStringArray(payload, "tags");
+    if (tags.empty()) {
+        tags = {"HarmonyOS", "Demo"};
+    }
     const int64_t now = NowEpochMs();
 
     state.diary_counter += 1;
@@ -508,9 +616,10 @@ std::string DemoCaptureDiary(const std::string& payload) {
         .id = "diary-" + std::to_string(state.diary_counter),
         .title = title.empty() ? "未命名日记" : title,
         .content = content.empty() ? "未输入正文。" : content,
-        .mood = "CALM",
+        .mood = mood.empty() ? "CALM" : mood,
         .ai_summary = "Demo bridge 已记录这条日记。",
-        .tags = {"HarmonyOS", "Demo"},
+        .tags = tags,
+        .created_at_epoch_ms = now,
         .updated_at_epoch_ms = now
     });
     state.pending_changes += 1;
@@ -527,6 +636,8 @@ std::string DemoCaptureSchedule(const std::string& payload) {
     const std::string description = Trim(ExtractJsonString(payload, "description"));
     const int64_t start_time = ExtractJsonInt64(payload, "startTimeEpochMs", NowEpochMs());
     const int64_t end_time = ExtractJsonInt64(payload, "endTimeEpochMs", start_time + 60 * 60 * 1000);
+    const std::string type = Trim(ExtractJsonString(payload, "type"));
+    const int64_t now = NowEpochMs();
 
     state.schedule_counter += 1;
     state.schedules.insert(state.schedules.begin(), DemoScheduleEvent{
@@ -535,7 +646,9 @@ std::string DemoCaptureSchedule(const std::string& payload) {
         .description = description,
         .start_time_epoch_ms = start_time,
         .end_time_epoch_ms = end_time,
-        .type = "WORK"
+        .type = type.empty() ? "WORK" : type,
+        .created_at_epoch_ms = now,
+        .updated_at_epoch_ms = now
     });
     state.pending_changes += 1;
 
@@ -558,6 +671,7 @@ std::string DemoSendChatMessage(const std::string& payload) {
         state.chat_sessions.insert(state.chat_sessions.begin(), DemoChatSession{
             .id = session_id,
             .title = TruncateTitle(prompt),
+            .created_at_epoch_ms = now,
             .updated_at_epoch_ms = now
         });
     }
@@ -583,6 +697,7 @@ std::string DemoSendChatMessage(const std::string& payload) {
         .session_id = session_id,
         .role = "USER",
         .content = prompt.empty() ? "未输入消息。" : prompt,
+        .created_at_epoch_ms = now,
         .updated_at_epoch_ms = now
     });
 
@@ -592,6 +707,7 @@ std::string DemoSendChatMessage(const std::string& payload) {
         .session_id = session_id,
         .role = "ASSISTANT",
         .content = BuildAssistantReply(prompt.empty() ? "空消息" : prompt),
+        .created_at_epoch_ms = now + 1,
         .updated_at_epoch_ms = now + 1
     });
     state.pending_changes += 1;
@@ -616,16 +732,126 @@ std::string DemoSavePreferences(const std::string& payload) {
     const std::string ai_mode = Trim(ExtractJsonString(payload, "aiMode"));
     if (!ai_mode.empty()) {
         state.ai_mode = ai_mode;
-        state.ai_mode_label = ai_mode == "CLOUD_ENHANCED" ? "云增强" : "仅本地";
+        if (ai_mode == "LOCAL_FIRST_CLOUD_ENHANCEMENT") {
+            state.ai_mode_label = "本地优先";
+        } else if (ai_mode == "MANUAL_CLOUD_ENHANCEMENT") {
+            state.ai_mode_label = "手动云增强";
+        } else if (ai_mode == "DISABLED") {
+            state.ai_mode_label = "完全关闭";
+        } else {
+            state.ai_mode_label = "仅本地";
+        }
     }
 
     const std::string cloud_base_url = Trim(ExtractJsonString(payload, "cloudEnhancementBaseUrl"));
-    if (!cloud_base_url.empty()) {
-        state.cloud_enhancement_base_url = cloud_base_url;
+    state.cloud_enhancement_base_url = cloud_base_url;
+
+    const std::string lightweight_package_id = Trim(ExtractJsonString(payload, "localLightweightModelPackageId"));
+    if (!lightweight_package_id.empty()) {
+        state.local_lightweight_model_package_id = lightweight_package_id;
+    }
+
+    const std::string generative_package_id = Trim(ExtractJsonString(payload, "localGenerativeModelPackageId"));
+    if (!generative_package_id.empty()) {
+        state.local_generative_model_package_id = generative_package_id;
+    }
+
+    const std::string model_download_policy = Trim(ExtractJsonString(payload, "modelDownloadPolicy"));
+    if (!model_download_policy.empty()) {
+        state.model_download_policy = model_download_policy;
+        if (model_download_policy == "WIFI_ONLY") {
+            state.model_download_policy_label = "仅 Wi-Fi";
+        } else if (model_download_policy == "MANUAL_ONLY") {
+            state.model_download_policy_label = "手动下载";
+        } else if (model_download_policy == "BACKGROUND_ALLOWED") {
+            state.model_download_policy_label = "允许后台";
+        } else {
+            state.model_download_policy_label = "预置模型";
+        }
     }
 
     state.pending_changes += 1;
     return BuildResponseJson(state, "已保存 demo 偏好设置。");
+}
+
+std::string DemoAuthenticate(const std::string& payload) {
+    std::lock_guard<std::mutex> lock(DemoStateMutex());
+    DemoBridgeState& state = DemoState();
+    EnsureDemoBootstrapped(state);
+
+    const std::string username = Trim(ExtractJsonString(payload, "username"));
+    const std::string password = ExtractJsonString(payload, "password");
+    if (username != state.username || password != state.password) {
+        return BuildResponseJson(state, "账号或密码错误。", "", "", false);
+    }
+
+    state.last_login_at_epoch_ms = NowEpochMs();
+    return BuildResponseJson(
+        state,
+        state.must_change_credentials ? "首次使用请先修改账号和密码。" : "登录成功。"
+    );
+}
+
+std::string DemoForceResetCredentials(const std::string& payload) {
+    std::lock_guard<std::mutex> lock(DemoStateMutex());
+    DemoBridgeState& state = DemoState();
+    EnsureDemoBootstrapped(state);
+
+    const std::string new_username = Trim(ExtractJsonString(payload, "newUsername"));
+    const std::string new_password = ExtractJsonString(payload, "newPassword");
+    if (new_username.empty()) {
+        return BuildResponseJson(state, "账号不能为空。", "", "", false);
+    }
+    if (new_password.empty()) {
+        return BuildResponseJson(state, "密码不能为空。", "", "", false);
+    }
+    if (new_username == "MindWeave") {
+        return BuildResponseJson(state, "默认账号不能继续使用，请更换为个人账号。", "", "", false);
+    }
+    if (new_password == "MindWeave") {
+        return BuildResponseJson(state, "默认密码不能继续使用，请设置新密码。", "", "", false);
+    }
+
+    const int64_t now = NowEpochMs();
+    state.username = new_username;
+    state.password = new_password;
+    state.must_change_credentials = false;
+    state.updated_at_epoch_ms = now;
+    state.credentials_updated_at_epoch_ms = now;
+    return BuildResponseJson(state, "默认凭据已停用，后续请使用新账号和密码登录。");
+}
+
+std::string DemoChangeCredentials(const std::string& payload) {
+    std::lock_guard<std::mutex> lock(DemoStateMutex());
+    DemoBridgeState& state = DemoState();
+    EnsureDemoBootstrapped(state);
+
+    const std::string current_password = ExtractJsonString(payload, "currentPassword");
+    const std::string new_username = Trim(ExtractJsonString(payload, "newUsername"));
+    const std::string new_password = ExtractJsonString(payload, "newPassword");
+    if (current_password != state.password) {
+        return BuildResponseJson(state, "当前密码不正确。", "", "", false);
+    }
+    if (new_username.empty()) {
+        return BuildResponseJson(state, "账号不能为空。", "", "", false);
+    }
+    if (new_password.empty()) {
+        return BuildResponseJson(state, "密码不能为空。", "", "", false);
+    }
+    if (new_username == "MindWeave") {
+        return BuildResponseJson(state, "默认账号不能继续使用，请更换为个人账号。", "", "", false);
+    }
+    if (new_password == "MindWeave") {
+        return BuildResponseJson(state, "默认密码不能继续使用，请设置新密码。", "", "", false);
+    }
+
+    const int64_t now = NowEpochMs();
+    state.username = new_username;
+    state.password = new_password;
+    state.must_change_credentials = false;
+    state.updated_at_epoch_ms = now;
+    state.credentials_updated_at_epoch_ms = now;
+    return BuildResponseJson(state, "账户信息已更新。下次登录请使用新凭据。");
 }
 #endif
 
@@ -701,6 +927,42 @@ napi_value SavePreferences(napi_env env, napi_callback_info info) {
 #endif
 }
 
+napi_value Authenticate(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value argv[1] = {nullptr};
+    napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+    const std::string payload = argc > 0 ? GetUtf8(env, argv[0]) : "{}";
+#ifdef MINDWEAVE_USE_KOTLIN_BRIDGE
+    return NewUtf8(env, CallBridge(mindweave_bridge_authenticate, payload));
+#else
+    return NewUtf8(env, DemoAuthenticate(payload));
+#endif
+}
+
+napi_value ForceResetCredentials(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value argv[1] = {nullptr};
+    napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+    const std::string payload = argc > 0 ? GetUtf8(env, argv[0]) : "{}";
+#ifdef MINDWEAVE_USE_KOTLIN_BRIDGE
+    return NewUtf8(env, CallBridge(mindweave_bridge_force_reset_credentials, payload));
+#else
+    return NewUtf8(env, DemoForceResetCredentials(payload));
+#endif
+}
+
+napi_value ChangeCredentials(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value argv[1] = {nullptr};
+    napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+    const std::string payload = argc > 0 ? GetUtf8(env, argv[0]) : "{}";
+#ifdef MINDWEAVE_USE_KOTLIN_BRIDGE
+    return NewUtf8(env, CallBridge(mindweave_bridge_change_credentials, payload));
+#else
+    return NewUtf8(env, DemoChangeCredentials(payload));
+#endif
+}
+
 napi_value RunSync(napi_env env, napi_callback_info info) {
     (void)info;
 #ifdef MINDWEAVE_USE_KOTLIN_BRIDGE
@@ -722,6 +984,9 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"sendChatMessage", nullptr, SendChatMessage, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"runSync", nullptr, RunSync, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"savePreferences", nullptr, SavePreferences, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"authenticate", nullptr, Authenticate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"forceResetCredentials", nullptr, ForceResetCredentials, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"changeCredentials", nullptr, ChangeCredentials, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
     napi_define_properties(env, exports, sizeof(descriptors) / sizeof(descriptors[0]), descriptors);
     return exports;

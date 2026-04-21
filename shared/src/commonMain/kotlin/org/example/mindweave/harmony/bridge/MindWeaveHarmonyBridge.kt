@@ -74,9 +74,31 @@ data class HarmonyBridgePreferenceRequest(
 )
 
 @Serializable
+data class HarmonyBridgeAuthenticateRequest(
+    val username: String,
+    val password: String,
+)
+
+@Serializable
+data class HarmonyBridgeCredentialResetRequest(
+    val newUsername: String,
+    val newPassword: String,
+)
+
+@Serializable
+data class HarmonyBridgeChangeCredentialsRequest(
+    val currentPassword: String,
+    val newUsername: String,
+    val newPassword: String,
+)
+
+@Serializable
 data class HarmonyBridgeAccountState(
     val username: String,
     val mustChangeCredentials: Boolean,
+    val createdAtEpochMs: Long,
+    val updatedAtEpochMs: Long,
+    val credentialsUpdatedAtEpochMs: Long,
     val lastLoginAtEpochMs: Long? = null,
 )
 
@@ -145,6 +167,9 @@ class MindWeaveHarmonyBridgeController(
                     HarmonyBridgeAccountState(
                         username = account.username,
                         mustChangeCredentials = account.mustChangeCredentials,
+                        createdAtEpochMs = account.createdAtEpochMs,
+                        updatedAtEpochMs = account.updatedAtEpochMs,
+                        credentialsUpdatedAtEpochMs = account.credentialsUpdatedAtEpochMs,
                         lastLoginAtEpochMs = account.lastLoginAtEpochMs,
                     )
                 },
@@ -217,6 +242,51 @@ class MindWeaveHarmonyBridgeController(
             modelDownloadPolicy = ModelDownloadPolicy.fromStorage(request.modelDownloadPolicy),
         )
         return snapshot(message = "鸿蒙端 AI 配置已更新。")
+    }
+
+    suspend fun authenticate(request: HarmonyBridgeAuthenticateRequest): HarmonyBridgeResponse {
+        val account = graph.accountRepository.authenticate(
+            username = request.username,
+            password = request.password,
+        )
+        return if (account == null) {
+            snapshot(message = "账号或密码错误。").copy(ok = false, message = "账号或密码错误。")
+        } else {
+            snapshot(
+                message = if (account.mustChangeCredentials) {
+                    "首次使用请先修改账号和密码。"
+                } else {
+                    "登录成功。"
+                },
+            )
+        }
+    }
+
+    suspend fun forceResetCredentials(request: HarmonyBridgeCredentialResetRequest): HarmonyBridgeResponse {
+        val error = graph.accountRepository.forceResetCredentials(
+            userId = graph.session.userId,
+            newUsername = request.newUsername,
+            newPassword = request.newPassword,
+        )
+        return if (error != null) {
+            snapshot(message = error).copy(ok = false, message = error)
+        } else {
+            snapshot(message = "默认凭据已停用，后续请使用新账号和密码登录。")
+        }
+    }
+
+    suspend fun changeCredentials(request: HarmonyBridgeChangeCredentialsRequest): HarmonyBridgeResponse {
+        val error = graph.accountRepository.changeCredentials(
+            userId = graph.session.userId,
+            currentPassword = request.currentPassword,
+            newUsername = request.newUsername,
+            newPassword = request.newPassword,
+        )
+        return if (error != null) {
+            snapshot(message = error).copy(ok = false, message = error)
+        } else {
+            snapshot(message = "账户信息已更新。下次登录请使用新凭据。")
+        }
     }
 
     suspend fun runSync(): HarmonyBridgeResponse {

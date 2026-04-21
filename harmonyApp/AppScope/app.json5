@@ -4,6 +4,7 @@
     "vendor": "mindweave",
     "versionCode": 1,
     "versionName": "1.0.0",
-    "label": "MindWeave"
+    "icon": "$media:app_icon",
+    "label": "$string:app_name"
   }
 }

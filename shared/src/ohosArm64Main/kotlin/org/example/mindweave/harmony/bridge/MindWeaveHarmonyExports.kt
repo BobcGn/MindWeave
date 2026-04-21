@@ -93,6 +93,36 @@ fun mindweaveBridgeSavePreferences(requestJson: CPointer<ByteVar>?): CPointer<By
     }
 
 @OptIn(ExperimentalForeignApi::class)
+@CName("mindweave_bridge_authenticate")
+fun mindweaveBridgeAuthenticate(requestJson: CPointer<ByteVar>?): CPointer<ByteVar>? =
+    withController { controller ->
+        runBlocking {
+            val request = decodeRequest<HarmonyBridgeAuthenticateRequest>(requestJson)
+            MindWeaveJson.encodeToString(controller.authenticate(request))
+        }
+    }
+
+@OptIn(ExperimentalForeignApi::class)
+@CName("mindweave_bridge_force_reset_credentials")
+fun mindweaveBridgeForceResetCredentials(requestJson: CPointer<ByteVar>?): CPointer<ByteVar>? =
+    withController { controller ->
+        runBlocking {
+            val request = decodeRequest<HarmonyBridgeCredentialResetRequest>(requestJson)
+            MindWeaveJson.encodeToString(controller.forceResetCredentials(request))
+        }
+    }
+
+@OptIn(ExperimentalForeignApi::class)
+@CName("mindweave_bridge_change_credentials")
+fun mindweaveBridgeChangeCredentials(requestJson: CPointer<ByteVar>?): CPointer<ByteVar>? =
+    withController { controller ->
+        runBlocking {
+            val request = decodeRequest<HarmonyBridgeChangeCredentialsRequest>(requestJson)
+            MindWeaveJson.encodeToString(controller.changeCredentials(request))
+        }
+    }
+
+@OptIn(ExperimentalForeignApi::class)
 @CName("mindweave_bridge_dispose_string")
 fun mindweaveBridgeDisposeString(value: CPointer<ByteVar>?) {
     if (value != null) {

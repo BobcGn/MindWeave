@@ -1,5 +1,11 @@
 {
   "name": "entry",
   "version": "1.0.0",
-  "description": "MindWeave Harmony entry module"
+  "description": "MindWeave Harmony entry module",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "libmindweave_bridge.so": "file:./src/main/cpp/types/mindweave_bridge"
+  }
 }
