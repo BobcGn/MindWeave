@@ -114,6 +114,16 @@ case "$( uname )" in                #(
   NONSTOP* )        nonstop=true ;;
 esac
 
+# Prefer JDK 21 for this project because newer JDKs currently break
+# Gradle/Kotlin DSL configuration in this repository.
+if [ "$darwin" = true ] && [ -x /usr/libexec/java_home ] ; then
+    java_21_home=$(/usr/libexec/java_home -v 21 2>/dev/null || true)
+    if [ -n "$java_21_home" ] ; then
+        JAVA_HOME=$java_21_home
+        export JAVA_HOME
+    fi
+fi
+
 CLASSPATH="\\\"\\\""
 
 

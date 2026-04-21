@@ -64,22 +64,51 @@ Kotlin/Native 当前导出：
 
 ## 构建
 
-1. 编译 Kotlin/Native 产物：
+1. 默认 profile 会优先保证链路可执行，即使本机没有 OHOS Kotlin target，也会准备好 demo bridge fallback：
 
 ```bash
 ./2.0_ohos_mindweave_build.sh Debug
 ```
 
-2. 脚本会把 `libmindweave.so` 同步到：
+2. 如果你已经接入 Tencent KBA toolchain，可显式切换到真实 native 构建：
+
+```bash
+./2.0_ohos_mindweave_build.sh Debug kba
+```
+
+也可以直接走 Gradle：
+
+```bash
+./gradlew -c settings.2.0.ohos.gradle.kts publishDebugBinariesToHarmonyApp
+./gradlew -c settings.2.0.ohos.gradle.kts -Pmindweave.ohos.toolchain=kba publishDebugBinariesToHarmonyApp
+```
+
+3. 当真实 OHOS target 可用时，任务会把 `libmindweave.so` 同步到：
 
 ```text
 harmonyApp/entry/src/main/libs/arm64-v8a/libmindweave.so
 ```
 
-3. 然后在 DevEco Studio 打开 `harmonyApp`，构建 `entry` 模块。
+4. 不论是真实 native bridge 还是 demo bridge，Gradle 都会写入：
+
+```text
+harmonyApp/entry/src/main/libs/arm64-v8a/mindweave_bridge_mode.txt
+```
+
+`CMakeLists.txt` 会根据这个标记选择 Kotlin bridge 或 demo bridge。
+
+5. 然后在 DevEco Studio 打开 `harmonyApp`，构建 `entry` 模块。
+
+6. 需要排查当前 profile 状态时，执行：
+
+```bash
+./gradlew -c settings.2.0.ohos.gradle.kts harmonyBuildDoctor
+```
 
 ## 当前边界
 
 - Harmony profile 独立于默认 `settings.gradle.kts`，不会影响 Android / iOS 主链路。
+- 默认 `standard` toolchain 不要求本机具备 `ohosArm64`，因此会稳定回落到 demo bridge。
+- `kba` toolchain 通过 `-Pmindweave.ohos.toolchain=kba` 或脚本第二参数启用，依赖 Tencent KBA 仓库或本地 Maven。
 - Harmony 侧 AI 默认保持本地优先；云增强 HTTP engine 还没有接入真实 OHOS 网络实现。
 - Kotlin/Native 导出层已经准备好，ArkUI 页面目前覆盖日记、日程、聊天、同步和快照展示。

@@ -1,8 +1,8 @@
 package org.example.mindweave.util
 
+import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Instant
 
 fun formatMoment(epochMs: Long): String {
     val moment = Instant.fromEpochMilliseconds(epochMs).toLocalDateTime(TimeZone.currentSystemDefault())
