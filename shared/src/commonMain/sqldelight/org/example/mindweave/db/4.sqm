@@ -1,0 +1,31 @@
+ALTER TABLE user_preferences
+ADD COLUMN ai_mode TEXT NOT NULL DEFAULT 'LOCAL_ONLY';
+
+ALTER TABLE user_preferences
+ADD COLUMN cloud_enhancement_base_url TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE user_preferences
+ADD COLUMN local_lightweight_model_package_id TEXT NOT NULL DEFAULT 'mindweave-lite-core';
+
+ALTER TABLE user_preferences
+ADD COLUMN local_generative_model_package_id TEXT NOT NULL DEFAULT 'mindweave-gen-core';
+
+ALTER TABLE user_preferences
+ADD COLUMN model_download_policy TEXT NOT NULL DEFAULT 'PREBUNDLED';
+
+CREATE TABLE ai_model_package (
+  package_id TEXT NOT NULL PRIMARY KEY,
+  display_name TEXT NOT NULL,
+  package_kind TEXT NOT NULL,
+  semantic_version TEXT NOT NULL,
+  install_status TEXT NOT NULL,
+  local_path TEXT,
+  downloaded_bytes INTEGER NOT NULL,
+  total_bytes INTEGER,
+  is_enabled INTEGER NOT NULL,
+  download_policy TEXT NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX ai_model_package_kind_status_idx
+ON ai_model_package(package_kind, install_status);

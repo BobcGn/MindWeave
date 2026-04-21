@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import org.example.mindweave.ai.AiSettings
+import org.example.mindweave.platform.PlatformContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -13,7 +14,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             App(
-                platformContext = applicationContext,
+                platformContext = PlatformContext(applicationContext),
                 aiSettings = AiSettings.Disabled,
             )
         }

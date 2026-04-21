@@ -37,9 +37,12 @@ import org.example.mindweave.domain.model.SyncState
 import org.example.mindweave.domain.model.Tag
 import org.example.mindweave.repository.ChatRepository
 import org.example.mindweave.repository.DiaryRepository
+import org.example.mindweave.repository.ModelPackageRepository
 import org.example.mindweave.repository.ScheduleRepository
 import org.example.mindweave.repository.SyncRepository
 import org.example.mindweave.repository.TagRepository
+import org.example.mindweave.repository.AccountRepository
+import org.example.mindweave.repository.UserPreferencesRepository
 import org.example.mindweave.util.IdGenerator
 import org.example.mindweave.util.MindWeaveJson
 import org.example.mindweave.util.currentEpochMillis
@@ -809,12 +812,18 @@ fun createLocalRepositories(
     val syncRepository = SqlDelightSyncRepository(database)
     val outboxRecorder = SqlOutboxRecorder(syncRepository)
     val tagRepository = SqlDelightTagRepository(database, outboxRecorder)
+    val accountRepository = SqlDelightAccountRepository(database)
+    val userPreferencesRepository = SqlDelightUserPreferencesRepository(database)
+    val modelPackageRepository = SqlDelightModelPackageRepository(database)
     return LocalRepositories(
         diaryRepository = SqlDelightDiaryRepository(database, tagRepository, outboxRecorder),
         scheduleRepository = SqlDelightScheduleRepository(database, outboxRecorder),
         tagRepository = tagRepository,
         chatRepository = SqlDelightChatRepository(database, outboxRecorder),
         syncRepository = syncRepository,
+        accountRepository = accountRepository,
+        userPreferencesRepository = userPreferencesRepository,
+        modelPackageRepository = modelPackageRepository,
         session = session,
     )
 }
@@ -825,6 +834,9 @@ data class LocalRepositories(
     val tagRepository: TagRepository,
     val chatRepository: ChatRepository,
     val syncRepository: SyncRepository,
+    val accountRepository: AccountRepository,
+    val userPreferencesRepository: UserPreferencesRepository,
+    val modelPackageRepository: ModelPackageRepository,
     val session: AppSession,
 )
 

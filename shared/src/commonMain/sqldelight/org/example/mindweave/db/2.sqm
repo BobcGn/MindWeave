@@ -1,0 +1,16 @@
+CREATE TABLE user_account (
+  user_id TEXT NOT NULL PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  must_change_credentials INTEGER NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE TABLE user_preferences (
+  user_id TEXT NOT NULL PRIMARY KEY,
+  openai_api_key TEXT NOT NULL,
+  openai_model TEXT NOT NULL,
+  openai_base_url TEXT NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL
+);

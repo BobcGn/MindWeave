@@ -93,6 +93,15 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "org.example.mindweave"
             packageVersion = "1.0.0"
+            linux {
+                iconFile.set(project.file("src/commonMain/composeResources/drawable/app_icon.png"))
+            }
+            macOS {
+                iconFile.set(project.file("desktop-icons/app_icon.icns"))
+            }
+            windows {
+                iconFile.set(project.file("desktop-icons/app_icon.ico"))
+            }
         }
     }
 }

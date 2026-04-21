@@ -1,12 +1,5 @@
 package org.example.mindweave
 
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import org.example.mindweave.server.appModule
+import io.ktor.server.netty.EngineMain
 
-fun main() {
-    embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0") {
-        appModule()
-    }
-        .start(wait = true)
-}
+fun main(args: Array<String>) = EngineMain.main(args)

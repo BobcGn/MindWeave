@@ -1,0 +1,156 @@
+CREATE TABLE user_account (
+  user_id TEXT NOT NULL PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  must_change_credentials INTEGER AS kotlin.Boolean NOT NULL,
+  created_at_epoch_ms INTEGER NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL,
+  credentials_updated_at_epoch_ms INTEGER NOT NULL,
+  last_login_at_epoch_ms INTEGER
+);
+
+CREATE TABLE user_preferences (
+  user_id TEXT NOT NULL PRIMARY KEY,
+  openai_api_key TEXT NOT NULL,
+  openai_model TEXT NOT NULL,
+  openai_base_url TEXT NOT NULL,
+  ai_mode TEXT NOT NULL,
+  cloud_enhancement_base_url TEXT NOT NULL,
+  local_lightweight_model_package_id TEXT NOT NULL,
+  local_generative_model_package_id TEXT NOT NULL,
+  model_download_policy TEXT NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE TABLE ai_model_package (
+  package_id TEXT NOT NULL PRIMARY KEY,
+  display_name TEXT NOT NULL,
+  package_kind TEXT NOT NULL,
+  semantic_version TEXT NOT NULL,
+  install_status TEXT NOT NULL,
+  local_path TEXT,
+  downloaded_bytes INTEGER NOT NULL,
+  total_bytes INTEGER,
+  is_enabled INTEGER AS kotlin.Boolean NOT NULL,
+  download_policy TEXT NOT NULL,
+  updated_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX ai_model_package_kind_status_idx
+ON ai_model_package(package_kind, install_status);
+
+selectAccountByUserId:
+SELECT
+  user_id,
+  username,
+  password_hash,
+  must_change_credentials,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  credentials_updated_at_epoch_ms,
+  last_login_at_epoch_ms
+FROM user_account
+WHERE user_id = ?;
+
+selectAccountByUsername:
+SELECT
+  user_id,
+  username,
+  password_hash,
+  must_change_credentials,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  credentials_updated_at_epoch_ms,
+  last_login_at_epoch_ms
+FROM user_account
+WHERE username = ?;
+
+upsertAccount:
+INSERT OR REPLACE INTO user_account(
+  user_id,
+  username,
+  password_hash,
+  must_change_credentials,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  credentials_updated_at_epoch_ms,
+  last_login_at_epoch_ms
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+recordSuccessfulLogin:
+UPDATE user_account
+SET last_login_at_epoch_ms = ?
+WHERE user_id = ?;
+
+selectPreferencesByUserId:
+SELECT
+  user_id,
+  ai_mode,
+  cloud_enhancement_base_url,
+  local_lightweight_model_package_id,
+  local_generative_model_package_id,
+  model_download_policy,
+  updated_at_epoch_ms
+FROM user_preferences
+WHERE user_id = ?;
+
+upsertUserPreferences:
+INSERT OR REPLACE INTO user_preferences(
+  user_id,
+  openai_api_key,
+  openai_model,
+  openai_base_url,
+  ai_mode,
+  cloud_enhancement_base_url,
+  local_lightweight_model_package_id,
+  local_generative_model_package_id,
+  model_download_policy,
+  updated_at_epoch_ms
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllModelPackages:
+SELECT
+  package_id,
+  display_name,
+  package_kind,
+  semantic_version,
+  install_status,
+  local_path,
+  downloaded_bytes,
+  total_bytes,
+  is_enabled,
+  download_policy,
+  updated_at_epoch_ms
+FROM ai_model_package
+ORDER BY package_kind, package_id;
+
+selectModelPackageById:
+SELECT
+  package_id,
+  display_name,
+  package_kind,
+  semantic_version,
+  install_status,
+  local_path,
+  downloaded_bytes,
+  total_bytes,
+  is_enabled,
+  download_policy,
+  updated_at_epoch_ms
+FROM ai_model_package
+WHERE package_id = ?;
+
+upsertModelPackage:
+INSERT OR REPLACE INTO ai_model_package(
+  package_id,
+  display_name,
+  package_kind,
+  semantic_version,
+  install_status,
+  local_path,
+  downloaded_bytes,
+  total_bytes,
+  is_enabled,
+  download_policy,
+  updated_at_epoch_ms
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);

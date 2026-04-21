@@ -1,6 +1,7 @@
 package org.example.mindweave.server.service
 
 import io.ktor.server.application.ApplicationEnvironment
+import io.ktor.server.config.ApplicationConfig
 import java.net.URI
 
 data class ManagedServerSyncService(
@@ -29,23 +30,32 @@ data class PostgresSyncDatabaseConfig(
     }
 
     companion object {
-        fun fromEnvironment(environment: Map<String, String> = System.getenv()): PostgresSyncDatabaseConfig? {
-            val jdbcUrl = environment["MINDWEAVE_POSTGRES_URL"]?.trim().orEmpty()
+        fun fromConfig(config: ApplicationConfig): PostgresSyncDatabaseConfig? {
+            val jdbcUrl = config.propertyOrNull("mindweave.sync.postgres.jdbcUrl")
+                ?.getString()
+                ?.trim()
+                .orEmpty()
             if (jdbcUrl.isEmpty()) {
                 return null
             }
 
             return PostgresSyncDatabaseConfig(
                 jdbcUrl = jdbcUrl,
-                username = environment["MINDWEAVE_POSTGRES_USER"]?.trim()?.ifEmpty { null },
-                password = environment["MINDWEAVE_POSTGRES_PASSWORD"]?.trim()?.ifEmpty { null },
+                username = config.propertyOrNull("mindweave.sync.postgres.username")
+                    ?.getString()
+                    ?.trim()
+                    ?.ifEmpty { null },
+                password = config.propertyOrNull("mindweave.sync.postgres.password")
+                    ?.getString()
+                    ?.trim()
+                    ?.ifEmpty { null },
             )
         }
     }
 }
 
 fun createManagedServerSyncService(environment: ApplicationEnvironment): ManagedServerSyncService {
-    val config = PostgresSyncDatabaseConfig.fromEnvironment()
+    val config = PostgresSyncDatabaseConfig.fromConfig(environment.config)
     if (config == null) {
         environment.log.info("MindWeave sync service is using in-memory persistence.")
         return ManagedServerSyncService(

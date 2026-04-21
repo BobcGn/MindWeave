@@ -11,14 +11,14 @@ WHERE NOT EXISTS (
 
 \connect mindweave
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS mindweave_users (
   id TEXT PRIMARY KEY,
   created_at_epoch_ms BIGINT NOT NULL,
   updated_at_epoch_ms BIGINT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS devices (
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS mindweave_devices (
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   device_id TEXT NOT NULL,
   device_name TEXT NOT NULL,
   registered_at_epoch_ms BIGINT NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS devices (
 
 CREATE TABLE IF NOT EXISTS diary_entries (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   mood TEXT NOT NULL,
@@ -48,7 +48,7 @@ ON diary_entries(user_id, deleted_at_epoch_ms);
 
 CREATE TABLE IF NOT EXISTS schedule_events (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   start_time_epoch_ms BIGINT NOT NULL,
@@ -73,7 +73,7 @@ ON schedule_events(user_id, start_time_epoch_ms, end_time_epoch_ms);
 
 CREATE TABLE IF NOT EXISTS tags (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   created_at_epoch_ms BIGINT NOT NULL,
   updated_at_epoch_ms BIGINT NOT NULL,
@@ -93,7 +93,7 @@ ON tags(user_id, deleted_at_epoch_ms);
 
 CREATE TABLE IF NOT EXISTS diary_entry_tags (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   entry_id TEXT NOT NULL REFERENCES diary_entries(id) ON DELETE CASCADE,
   tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   created_at_epoch_ms BIGINT NOT NULL,
@@ -114,7 +114,7 @@ ON diary_entry_tags(user_id, deleted_at_epoch_ms);
 
 CREATE TABLE IF NOT EXISTS chat_sessions (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   created_at_epoch_ms BIGINT NOT NULL,
   updated_at_epoch_ms BIGINT NOT NULL,
@@ -132,7 +132,7 @@ ON chat_sessions(user_id, deleted_at_epoch_ms);
 CREATE TABLE IF NOT EXISTS chat_messages (
   id TEXT PRIMARY KEY,
   session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   role TEXT NOT NULL,
   content TEXT NOT NULL,
   created_at_epoch_ms BIGINT NOT NULL,
@@ -153,7 +153,7 @@ ON chat_messages(user_id, deleted_at_epoch_ms);
 
 CREATE TABLE IF NOT EXISTS change_log (
   seq BIGSERIAL PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   entity_type TEXT NOT NULL,
   entity_id TEXT NOT NULL,
   operation TEXT NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS change_log (
   updated_at_epoch_ms BIGINT NOT NULL,
   dedupe_key TEXT NOT NULL UNIQUE,
   CONSTRAINT change_log_device_fk
-    FOREIGN KEY (user_id, device_id) REFERENCES devices(user_id, device_id) ON DELETE CASCADE
+    FOREIGN KEY (user_id, device_id) REFERENCES mindweave_devices(user_id, device_id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS change_log_user_seq_idx
@@ -177,20 +177,20 @@ CREATE INDEX IF NOT EXISTS change_log_user_device_created_idx
 ON change_log(user_id, device_id, created_at_epoch_ms DESC);
 
 CREATE TABLE IF NOT EXISTS sync_dedupe_keys (
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   dedupe_key TEXT NOT NULL,
   PRIMARY KEY (user_id, dedupe_key)
 );
 
 CREATE TABLE IF NOT EXISTS device_sync_state (
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   device_id TEXT NOT NULL,
   last_pulled_seq BIGINT NOT NULL DEFAULT 0,
   last_push_at_epoch_ms BIGINT,
   last_pull_at_epoch_ms BIGINT,
   PRIMARY KEY (user_id, device_id),
   CONSTRAINT device_sync_state_device_fk
-    FOREIGN KEY (user_id, device_id) REFERENCES devices(user_id, device_id) ON DELETE CASCADE
+    FOREIGN KEY (user_id, device_id) REFERENCES mindweave_devices(user_id, device_id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS device_sync_state_last_pull_idx
@@ -198,7 +198,7 @@ ON device_sync_state(user_id, last_pulled_seq DESC);
 
 CREATE TABLE IF NOT EXISTS sync_conflicts (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES mindweave_users(id) ON DELETE CASCADE,
   entity_type TEXT NOT NULL,
   entity_id TEXT NOT NULL,
   local_payload JSONB NOT NULL,

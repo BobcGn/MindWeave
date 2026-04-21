@@ -30,6 +30,10 @@ fun Application.appModule(
     syncService: ServerSyncService? = null,
     aiService: ServerAiService = ServerAiService(),
 ) {
+    val serviceName = environment.config.propertyOrNull("mindweave.service.name")?.getString()
+        ?.trim()
+        ?.ifEmpty { null }
+        ?: "mindweave-server"
     val managedSyncService = syncService?.let { service ->
         org.example.mindweave.server.service.ManagedServerSyncService(service = service)
     } ?: createManagedServerSyncService(environment)
@@ -87,7 +91,7 @@ fun Application.appModule(
             call.respond(
                 mapOf(
                     "status" to "ok",
-                    "service" to "mindweave-server",
+                    "service" to serviceName,
                 ),
             )
         }

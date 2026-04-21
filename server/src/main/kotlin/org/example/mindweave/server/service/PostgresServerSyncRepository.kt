@@ -544,7 +544,7 @@ class PostgresServerSyncRepository(
 
     private companion object {
         private const val UPSERT_USER_SQL = """
-            INSERT INTO users(id, created_at_epoch_ms, updated_at_epoch_ms)
+            INSERT INTO mindweave_users(id, created_at_epoch_ms, updated_at_epoch_ms)
             VALUES (?, ?, ?)
             ON CONFLICT (id) DO UPDATE
             SET
@@ -554,12 +554,12 @@ class PostgresServerSyncRepository(
 
         private const val SELECT_USER_SQL = """
             SELECT id, created_at_epoch_ms, updated_at_epoch_ms
-            FROM users
+            FROM mindweave_users
             WHERE id = ?
         """
 
         private const val UPSERT_DEVICE_SQL = """
-            INSERT INTO devices(user_id, device_id, device_name, registered_at_epoch_ms, last_seen_at_epoch_ms)
+            INSERT INTO mindweave_devices(user_id, device_id, device_name, registered_at_epoch_ms, last_seen_at_epoch_ms)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT (user_id, device_id) DO UPDATE
             SET
@@ -570,7 +570,7 @@ class PostgresServerSyncRepository(
 
         private const val SELECT_DEVICE_SQL = """
             SELECT user_id, device_id, device_name, registered_at_epoch_ms, last_seen_at_epoch_ms
-            FROM devices
+            FROM mindweave_devices
             WHERE user_id = ? AND device_id = ?
         """
 

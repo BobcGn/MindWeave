@@ -29,18 +29,20 @@ kotlin {
             implementation(libs.ktor.serializationKotlinxJson)
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
-            implementation(libs.koog.agents)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
         androidMain.dependencies {
+            implementation(libs.ktor.clientOkhttp)
             implementation(libs.sqldelight.androidDriver)
         }
         iosMain.dependencies {
+            implementation(libs.ktor.clientDarwin)
             implementation(libs.sqldelight.nativeDriver)
         }
         jvmMain.dependencies {
+            implementation(libs.ktor.clientOkhttp)
             implementation(libs.sqldelight.sqliteDriver)
         }
         jvmTest.dependencies {

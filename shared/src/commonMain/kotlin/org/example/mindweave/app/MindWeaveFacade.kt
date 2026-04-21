@@ -2,9 +2,14 @@ package org.example.mindweave.app
 
 import kotlinx.coroutines.flow.Flow
 import org.example.mindweave.ai.AiAgent
+import org.example.mindweave.ai.AiOperatingMode
+import org.example.mindweave.ai.AiSettings
 import org.example.mindweave.ai.ChatContextAssembler
-import org.example.mindweave.domain.ai.AiMode
+import org.example.mindweave.ai.ModelManager
+import org.example.mindweave.ai.createAiAgent
 import org.example.mindweave.domain.ai.AiRequest
+import org.example.mindweave.domain.ai.AiTask
+import org.example.mindweave.domain.model.UserPreferences
 import org.example.mindweave.domain.model.AppSession
 import org.example.mindweave.domain.model.ChatMessage
 import org.example.mindweave.domain.model.ChatRole
@@ -21,6 +26,7 @@ import org.example.mindweave.repository.DiaryRepository
 import org.example.mindweave.repository.ScheduleRepository
 import org.example.mindweave.repository.SyncRepository
 import org.example.mindweave.repository.TagRepository
+import org.example.mindweave.repository.UserPreferencesRepository
 import org.example.mindweave.sync.SyncManager
 import org.example.mindweave.util.currentEpochMillis
 
@@ -31,9 +37,11 @@ class MindWeaveFacade(
     private val tagRepository: TagRepository,
     private val chatRepository: ChatRepository,
     private val syncRepository: SyncRepository,
-    private val aiAgent: AiAgent,
+    private val userPreferencesRepository: UserPreferencesRepository,
     private val contextAssembler: ChatContextAssembler,
+    private val modelManager: ModelManager,
     private val syncManager: SyncManager?,
+    private val aiSettingsFallback: AiSettings = AiSettings.LocalOnly(),
     private val nowProvider: () -> Long = ::currentEpochMillis,
 ) {
     fun observeTimeline(): Flow<List<DiaryTimelineItem>> = diaryRepository.observeTimeline(session.userId)
@@ -48,10 +56,16 @@ class MindWeaveFacade(
 
     suspend fun captureDiary(draft: DiaryDraft): DiaryTimelineItem {
         val entry = diaryRepository.createDraft(session.userId, session.deviceId, draft)
-        val context = contextAssembler.build(session.userId, sessionId = null)
+        val preferences = userPreferencesRepository.getPreferences(session.userId)
+        val context = contextAssembler.build(
+            userId = session.userId,
+            sessionId = null,
+            userPreferences = preferences.toContextHints(),
+        )
+        val aiAgent = resolveAiAgent()
         val summary = aiAgent.summarize(context)
         val enriched = entry.copy(
-            aiSummary = summary.summary,
+            aiSummary = summary.body,
             updatedAtEpochMs = nowProvider(),
             version = entry.version + 1,
             lastModifiedByDeviceId = session.deviceId,
@@ -78,12 +92,19 @@ class MindWeaveFacade(
             content = prompt,
         )
 
-        val context = contextAssembler.build(session.userId, sessionId)
+        val preferences = userPreferencesRepository.getPreferences(session.userId)
+        val context = contextAssembler.build(
+            userId = session.userId,
+            sessionId = sessionId,
+            userPreferences = preferences.toContextHints(),
+        )
+        val aiAgent = resolveAiAgent()
         val response = aiAgent.chat(
             AiRequest(
-                mode = AiMode.CHAT,
+                task = AiTask.CHAT_REPLY,
                 prompt = prompt,
                 context = context,
+                allowCloudEnhancement = false,
             ),
         )
         chatRepository.appendMessage(
@@ -143,5 +164,46 @@ class MindWeaveFacade(
         if (chatRepository.getRecentMessages(session.userId, 1).isEmpty()) {
             sendChatMessage(existingSessionId = null, prompt = "帮我把这周的状态先梳理一下。")
         }
+    }
+
+    private suspend fun resolveAiAgent(): AiAgent =
+        createAiAgent(
+            settings = userPreferencesRepository.getPreferences(session.userId).toAiSettings(),
+            modelManager = modelManager,
+        )
+
+    private fun UserPreferences?.toAiSettings(): AiSettings {
+        val preferences = this ?: return aiSettingsFallback
+        return when (preferences.aiMode) {
+            AiOperatingMode.LOCAL_ONLY -> AiSettings.LocalOnly(
+                lightweightModelPackageId = preferences.localLightweightModelPackageId,
+                generativeModelPackageId = preferences.localGenerativeModelPackageId,
+                downloadPolicy = preferences.modelDownloadPolicy,
+            )
+            AiOperatingMode.LOCAL_FIRST_CLOUD_ENHANCEMENT -> AiSettings.LocalFirstCloudEnhancement(
+                cloudEnhancementBaseUrl = preferences.cloudEnhancementBaseUrl,
+                lightweightModelPackageId = preferences.localLightweightModelPackageId,
+                generativeModelPackageId = preferences.localGenerativeModelPackageId,
+                downloadPolicy = preferences.modelDownloadPolicy,
+            )
+            AiOperatingMode.MANUAL_CLOUD_ENHANCEMENT -> AiSettings.ManualCloudEnhancement(
+                cloudEnhancementBaseUrl = preferences.cloudEnhancementBaseUrl,
+                lightweightModelPackageId = preferences.localLightweightModelPackageId,
+                generativeModelPackageId = preferences.localGenerativeModelPackageId,
+                downloadPolicy = preferences.modelDownloadPolicy,
+            )
+            AiOperatingMode.DISABLED -> AiSettings.Disabled
+        }
+    }
+
+    private fun UserPreferences?.toContextHints(): List<String> {
+        val preferences = this ?: return emptyList()
+        return listOf(
+            "AI 模式：${preferences.aiMode.label}",
+            "本地轻模型：${preferences.localLightweightModelPackageId}",
+            "本地生成模型：${preferences.localGenerativeModelPackageId}",
+        ) + preferences.cloudEnhancementBaseUrl.takeIf { it.isNotBlank() }?.let {
+            listOf("云增强端点：$it")
+        }.orEmpty()
     }
 }

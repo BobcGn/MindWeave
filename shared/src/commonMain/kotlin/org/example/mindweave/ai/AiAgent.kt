@@ -13,7 +13,7 @@ interface AiAgent {
     suspend fun summarize(context: ChatContext): ConversationSummary
 }
 
-fun createAiAgent(settings: AiSettings): AiAgent = when (settings) {
-    is AiSettings.Disabled -> OfflineAiAgent()
-    is AiSettings.OpenAI -> KoogAiAgent(settings)
-}
+expect fun createAiAgent(
+    settings: AiSettings,
+    modelManager: ModelManager,
+): AiAgent
