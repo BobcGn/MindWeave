@@ -1,5 +1,6 @@
 import promptAction from '@ohos.promptAction';
 import nativeMindWeaveBridge from 'libmindweave_bridge.so';
+import { bridgeRuntimeConfig } from './BridgeRuntimeConfig';
 
 export interface BridgeSession {
   userId: string;
@@ -129,7 +130,7 @@ export function emptySnapshot(): BridgeSnapshot {
 export class MindWeaveBridge {
   bootstrap(): BridgeResponse {
     return this.decode(nativeModule.bootstrap(JSON.stringify({
-      databaseName: 'mindweave-harmony.db',
+      databaseName: bridgeRuntimeConfig.databaseName,
       deviceId: 'harmony-phone',
       deviceName: 'Harmony Phone'
     })));

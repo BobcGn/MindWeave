@@ -88,7 +88,8 @@ harmonyApp/entry/src/main/libs/arm64-v8a/libmindweave.so
 harmonyApp/entry/src/main/libs/arm64-v8a/mindweave_bridge_mode.txt
 ```
 
-`CMakeLists.txt` 会校验这个标记必须为 `kotlin`，否则直接失败，不再静默回落到 demo。
+`CMakeLists.txt` 会在 `libmindweave.so` 存在且该标记为 `kotlin` 时链接真实桥接。
+如果真实库缺失或标记不是 `kotlin`，`entry` 仍可完成构建，但只会产出 shell 版 NAPI 模块，运行时会明确返回“真实桥接未就绪”。
 
 5. 然后在 DevEco Studio 打开 `harmonyApp`，构建 `entry` 模块。
 
@@ -101,8 +102,9 @@ harmonyApp/entry/src/main/libs/arm64-v8a/mindweave_bridge_mode.txt
 ## 当前边界
 
 - Harmony profile 独立于默认 `settings.gradle.kts`，不会影响 Android / iOS 主链路。
-- 默认 `standard` toolchain 如果不具备 `ohosArm64`，发布任务会直接失败，不再回落到 demo bridge。
+- 默认 `standard` toolchain 如果不具备 `ohosArm64`，发布任务会直接失败。
 - `kba` toolchain 通过 `-Pmindweave.ohos.toolchain=kba` 或脚本第二参数启用，依赖 Tencent KBA 仓库或本地 Maven。
 - 即使 `kba` target 可见，仍然需要仓库里存在带 `ohos_arm64` 变体的 SQLDelight runtime/native-driver；否则 `publishDebugBinariesToHarmonyApp` 会在编译期失败。
+- 即使真实桥接库尚未发布，DevEco 的 CMake/native 编译也会降级为 shell 版 NAPI 模块，方便先完成 ArkUI/HAP 构建联调。
 - Harmony 侧 AI 默认保持本地优先；云增强 HTTP engine 还没有接入真实 OHOS 网络实现。
 - ArkUI 默认只初始化真实本地账户、SQLite 与 AI 偏好，不再自动灌入演示数据。

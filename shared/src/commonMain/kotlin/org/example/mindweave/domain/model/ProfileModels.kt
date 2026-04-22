@@ -1,8 +1,10 @@
 package org.example.mindweave.domain.model
 
+import kotlinx.serialization.Serializable
 import org.example.mindweave.ai.AiOperatingMode
 import org.example.mindweave.ai.ModelDownloadPolicy
 
+@Serializable
 data class UserAccount(
     val userId: String,
     val username: String,
@@ -14,6 +16,7 @@ data class UserAccount(
     val lastLoginAtEpochMs: Long?,
 )
 
+@Serializable
 data class UserPreferences(
     val userId: String,
     val aiMode: AiOperatingMode,

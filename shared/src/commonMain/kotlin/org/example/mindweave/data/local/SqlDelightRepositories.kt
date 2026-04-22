@@ -828,18 +828,6 @@ fun createLocalRepositories(
     )
 }
 
-data class LocalRepositories(
-    val diaryRepository: DiaryRepository,
-    val scheduleRepository: ScheduleRepository,
-    val tagRepository: TagRepository,
-    val chatRepository: ChatRepository,
-    val syncRepository: SyncRepository,
-    val accountRepository: AccountRepository,
-    val userPreferencesRepository: UserPreferencesRepository,
-    val modelPackageRepository: ModelPackageRepository,
-    val session: AppSession,
-)
-
 private fun String.decodeCsv(): List<String> =
     split(",")
         .map { it.trim() }

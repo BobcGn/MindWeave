@@ -62,9 +62,8 @@ dependencyResolutionManagement {
     }
 }
 
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
+// The OHOS profile relies on the caller selecting a local JDK (see 2.0_ohos_mindweave_build.sh).
+// Skipping the Foojay settings plugin keeps Harmony publish tasks runnable in restricted environments.
 
 val moduleBuildFileName = "build.2.0.ohos.gradle.kts"
 

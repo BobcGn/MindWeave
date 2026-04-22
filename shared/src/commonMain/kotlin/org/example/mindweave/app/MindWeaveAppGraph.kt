@@ -3,9 +3,7 @@ package org.example.mindweave.app
 import org.example.mindweave.ai.AiSettings
 import org.example.mindweave.ai.ChatContextAssembler
 import org.example.mindweave.ai.DefaultModelManager
-import org.example.mindweave.data.local.createLocalRepositories
-import org.example.mindweave.database.DriverFactory
-import org.example.mindweave.db.MindWeaveDatabase
+import org.example.mindweave.data.local.createPlatformLocalRepositories
 import org.example.mindweave.domain.model.AppSession
 import org.example.mindweave.platform.PlatformContext
 import org.example.mindweave.repository.AccountRepository
@@ -32,8 +30,10 @@ fun createMindWeaveAppGraph(
         deviceName = "MindWeave Device",
     ),
 ): MindWeaveAppGraph {
-    val database = MindWeaveDatabase(DriverFactory(platformContext).createDriver())
-    val repositories = createLocalRepositories(database, session)
+    val repositories = createPlatformLocalRepositories(
+        platformContext = platformContext,
+        session = session,
+    )
     val contextAssembler = ChatContextAssembler(
         diaryRepository = repositories.diaryRepository,
         scheduleRepository = repositories.scheduleRepository,

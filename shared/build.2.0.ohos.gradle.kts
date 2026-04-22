@@ -6,8 +6,6 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("app.cash.sqldelight")
 }
 
 fun String.capitalized(): String = replaceFirstChar {
@@ -32,20 +30,16 @@ val coroutinesVersion = version(
 val datetimeVersion = version(
     name = "mindweave.ohos.datetimeVersion",
     standard = "0.7.1",
-    kba = "0.6.1-SNAPSHOT",
+    kba = "0.6.2",
 )
 val serializationVersion = version(
     name = "mindweave.ohos.serializationVersion",
     standard = "1.9.0",
-    kba = "1.7.3-SNAPSHOT",
+    kba = "1.9.0",
 )
 val ktorVersion = version(
     name = "mindweave.ohos.ktorVersion",
     standard = "3.4.1",
-)
-val sqlDelightVersion = version(
-    name = "mindweave.ohos.sqldelightVersion",
-    standard = "2.1.0",
 )
 
 val harmonyLibDir = rootProject.layout.projectDirectory.dir("harmonyApp/entry/src/main/libs/arm64-v8a")
@@ -94,7 +88,6 @@ kotlin {
         ohosTarget.binaries {
             sharedLib {
                 baseName = "mindweave"
-                linkerOpts("-lsqlite3")
             }
         }
     } else {
@@ -103,33 +96,29 @@ kotlin {
     }
 
     sourceSets {
+        val commonMain = getByName("commonMain")
+        commonMain.kotlin.srcDir("src/ohosProfileCommonMain/kotlin")
+        commonMain.kotlin.exclude("org/example/mindweave/data/local/SqlDelightRepositories.kt")
+        commonMain.kotlin.exclude("org/example/mindweave/data/local/SqlDelightProfileRepositories.kt")
+        commonMain.kotlin.exclude("org/example/mindweave/database/DriverFactory.kt")
+        commonMain.kotlin.exclude("org/example/mindweave/network/HttpClientFactory.kt")
+        commonMain.kotlin.exclude("org/example/mindweave/network/KtorSyncApi.kt")
+        commonMain.kotlin.exclude("org/example/mindweave/ai/OpenAiAgent.kt")
+        commonMain.kotlin.exclude("org/example/mindweave/sync/LocalChangeApplier.kt")
+        commonMain.kotlin.exclude("org/example/mindweave/util/TimeFormatting.kt")
+        commonMain.kotlin.exclude("org/example/mindweave/util/AppJson.kt")
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-            implementation("org.jetbrains.kotlinx:kotlinx-datetime:$datetimeVersion")
-            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
-            implementation("io.ktor:ktor-client-core:$ktorVersion")
-            implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-            implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-            implementation("app.cash.sqldelight:runtime:$sqlDelightVersion")
-            implementation("app.cash.sqldelight:coroutines-extensions:$sqlDelightVersion")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
         if (ohosTarget != null) {
             val ohosArm64Main = maybeCreate("ohosArm64Main")
+            ohosArm64Main.kotlin.exclude("org/example/mindweave/database/DriverFactory.ohos.kt")
+            ohosArm64Main.kotlin.exclude("org/example/mindweave/network/HttpClientFactory.ohos.kt")
             ohosArm64Main.dependencies {
-                implementation("app.cash.sqldelight:native-driver:$sqlDelightVersion")
-                implementation("io.ktor:ktor-client-mock:$ktorVersion")
             }
-        }
-    }
-}
-
-sqldelight {
-    databases {
-        create("MindWeaveDatabase") {
-            packageName.set("org.example.mindweave.db")
         }
     }
 }
@@ -154,7 +143,6 @@ tasks.register("harmonyBuildDoctor") {
 
     doLast {
         println("mindweave.ohos.toolchain=${ohosToolchain.get()}")
-        println("mindweave.ohos.sqldelightVersion=$sqlDelightVersion")
         println("detected.kotlin.ohos.preset=${detectedPresetName ?: "none"}")
         println("native.target.available=$hasOhosTarget")
         println("published.lib.path=${harmonyLibFile.asFile.absolutePath}")
@@ -167,8 +155,6 @@ tasks.register("harmonyBuildDoctor") {
         if (!hasOhosTarget) {
             println("No OHOS Kotlin preset is available in the active Gradle toolchain.")
             println("Use -Pmindweave.ohos.toolchain=kba to enable a real Harmony Kotlin/Native build.")
-        } else {
-            println("A successful publish also requires a SQLDelight runtime/native-driver that exposes ohos_arm64 variants.")
         }
     }
 }

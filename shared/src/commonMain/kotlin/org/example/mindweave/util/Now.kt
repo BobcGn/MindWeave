@@ -1,4 +1,4 @@
 package org.example.mindweave.util
-import kotlin.time.Clock
+import kotlin.system.getTimeMillis
 
-fun currentEpochMillis(): Long = Clock.System.now().toEpochMilliseconds()
+fun currentEpochMillis(): Long = getTimeMillis()
