@@ -1,4 +1,4 @@
 package org.example.mindweave.util
-import kotlin.system.getTimeMillis
+import io.ktor.util.date.*
 
 fun currentEpochMillis(): Long = getTimeMillis()
