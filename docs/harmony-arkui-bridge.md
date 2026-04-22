@@ -1,5 +1,7 @@
 # Harmony ArkUI Bridge
 
+如需更偏普适性的方法论总结，见 [鸿蒙跨平台桥接实践手册](./harmony-cross-platform-practice.md)。
+
 ## 目标
 
 参考 `docs/Ruler.md` 与 `KuiklyUI跨平台实践分析.md`，鸿蒙侧采用：
