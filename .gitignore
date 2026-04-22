@@ -28,3 +28,4 @@ harmonyApp/hvigor/
 harmonyApp/**/oh_modules/
 harmonyApp/entry/src/main/libs/**/libmindweave.so
 harmonyApp/entry/src/main/libs/**/mindweave_bridge_mode.txt
+/.codebuddy/
