@@ -3,12 +3,14 @@ package org.example.mindweave.sync
 import org.example.mindweave.domain.model.SyncableEntity
 
 class LwwConflictResolver {
-    fun shouldApplyRemote(local: SyncableEntity?, remote: SyncableEntity): Boolean {
-        local ?: return true
-        return when {
-            remote.version > local.version -> true
-            remote.version < local.version -> false
-            else -> remote.updatedAtEpochMs >= local.updatedAtEpochMs
+    fun compareRemoteToLocal(local: SyncableEntity?, remote: SyncableEntity): Int {
+        local ?: return 1
+        if (remote.version != local.version) {
+            return remote.version.compareTo(local.version)
         }
+        if (remote.updatedAtEpochMs != local.updatedAtEpochMs) {
+            return remote.updatedAtEpochMs.compareTo(local.updatedAtEpochMs)
+        }
+        return remote.lastModifiedByDeviceId.compareTo(local.lastModifiedByDeviceId)
     }
 }

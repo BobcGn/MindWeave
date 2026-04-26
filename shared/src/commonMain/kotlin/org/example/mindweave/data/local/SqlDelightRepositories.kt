@@ -325,7 +325,7 @@ class SqlDelightTagRepository(
             if (existing.containsKey(name.lowercase())) return@forEach
             val now = nowProvider()
             val tag = Tag(
-                id = IdGenerator.next("tag", now),
+                id = stableTagId(userId, name),
                 userId = userId,
                 name = name,
                 createdAtEpochMs = now,
@@ -404,6 +404,9 @@ class SqlDelightTagRepository(
 
     override suspend fun getTagById(id: String): Tag? =
         queries.selectTagById(id, ::mapTag).executeAsOneOrNull()
+
+    override suspend fun getDiaryEntryTagById(id: String): DiaryEntryTag? =
+        queries.selectDiaryEntryTagById(id, ::mapDiaryEntryTag).executeAsOneOrNull()
 
     override suspend fun upsertTag(tag: Tag, trackSync: Boolean) {
         queries.upsertTag(
@@ -836,4 +839,16 @@ private fun String.decodeCsv(): List<String> =
 private fun List<String>.normalizeTags(): List<String> =
     map { it.trim() }
         .filter { it.isNotBlank() }
-        .distinct()
+        .distinctBy { it.lowercase() }
+
+private fun stableTagId(userId: String, name: String): String =
+    "tag-${stableIdComponent("$userId:${name.lowercase()}")}"
+
+private fun stableIdComponent(source: String): String {
+    var hash = 0xcbf29ce484222325uL
+    source.forEach { ch ->
+        hash = hash xor ch.code.toULong()
+        hash *= 0x100000001b3uL
+    }
+    return hash.toString(16).padStart(16, '0')
+}

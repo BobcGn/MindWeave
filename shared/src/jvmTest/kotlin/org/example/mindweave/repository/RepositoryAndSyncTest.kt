@@ -1,6 +1,7 @@
 package org.example.mindweave.repository
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import kotlinx.serialization.encodeToString
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,7 +16,9 @@ import org.example.mindweave.domain.model.ScheduleDraft
 import org.example.mindweave.domain.model.ScheduleType
 import org.example.mindweave.sync.InMemorySyncApi
 import org.example.mindweave.sync.LocalChangeApplier
+import org.example.mindweave.sync.RemoteChangeEnvelope
 import org.example.mindweave.sync.SyncManager
+import org.example.mindweave.util.MindWeaveJson
 import org.example.mindweave.util.currentEpochMillis
 
 class RepositoryAndSyncTest {
@@ -139,6 +142,65 @@ class RepositoryAndSyncTest {
         assertEquals(1, context.recentDiaries.size)
         assertEquals(1, context.upcomingEvents.size)
         assertEquals(1, context.recentMessages.size)
+    }
+
+    @Test
+    fun localChangeApplierShouldUseDeviceTieBreakerAndClearObsoleteOutbox() = runTest {
+        val session = AppSession("user-3", "device-a", "Device A")
+        val repositories = createRepositories(session)
+        val applier = LocalChangeApplier(
+            diaryRepository = repositories.diaryRepository,
+            scheduleRepository = repositories.scheduleRepository,
+            tagRepository = repositories.tagRepository,
+            chatRepository = repositories.chatRepository,
+            syncRepository = repositories.syncRepository,
+        )
+
+        repositories.diaryRepository.upsert(
+            org.example.mindweave.domain.model.DiaryEntry(
+                id = "diary-shared",
+                userId = session.userId,
+                title = "local",
+                content = "local content",
+                mood = DiaryMood.CALM,
+                aiSummary = null,
+                createdAtEpochMs = 10L,
+                updatedAtEpochMs = 100L,
+                deletedAtEpochMs = null,
+                version = 2L,
+                lastModifiedByDeviceId = session.deviceId,
+            ),
+            trackSync = true,
+        )
+
+        val remote = org.example.mindweave.domain.model.DiaryEntry(
+            id = "diary-shared",
+            userId = session.userId,
+            title = "remote",
+            content = "remote content",
+            mood = DiaryMood.GRATEFUL,
+            aiSummary = null,
+            createdAtEpochMs = 10L,
+            updatedAtEpochMs = 100L,
+            deletedAtEpochMs = null,
+            version = 2L,
+            lastModifiedByDeviceId = "device-z",
+        )
+
+        applier.apply(
+            RemoteChangeEnvelope(
+                seq = 1L,
+                entityType = org.example.mindweave.domain.model.EntityType.DIARY_ENTRY,
+                entityId = remote.id,
+                operation = org.example.mindweave.domain.model.SyncOperation.UPSERT,
+                payload = MindWeaveJson.encodeToString(org.example.mindweave.domain.model.DiaryEntry.serializer(), remote),
+                createdAtEpochMs = remote.updatedAtEpochMs,
+                deviceId = remote.lastModifiedByDeviceId,
+            ),
+        )
+
+        assertEquals("remote content", repositories.diaryRepository.getById(remote.id)?.entry?.content)
+        assertTrue(repositories.syncRepository.pendingChanges().isEmpty())
     }
 
     private fun createRepositories(session: AppSession) = createLocalRepositories(

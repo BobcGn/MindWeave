@@ -61,6 +61,20 @@ SELECT
 FROM tag
 WHERE id = ?;
 
+selectDiaryEntryTagById:
+SELECT
+  id,
+  user_id,
+  entry_id,
+  tag_id,
+  created_at_epoch_ms,
+  updated_at_epoch_ms,
+  deleted_at_epoch_ms,
+  version,
+  last_modified_by_device_id
+FROM diary_entry_tag
+WHERE id = ?;
+
 selectActiveTagsForEntry:
 SELECT
   tag.id,

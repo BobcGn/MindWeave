@@ -21,6 +21,8 @@ interface TagRepository {
 
     suspend fun getTagById(id: String): Tag?
 
+    suspend fun getDiaryEntryTagById(id: String): DiaryEntryTag?
+
     suspend fun upsertTag(tag: Tag, trackSync: Boolean = true)
 
     suspend fun upsertDiaryEntryTag(link: DiaryEntryTag, trackSync: Boolean = true)
